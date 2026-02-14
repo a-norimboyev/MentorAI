@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useAppData } from '../context/AppDataContext'
 import { 
   ArrowLeft,
   Users, 
@@ -22,11 +23,14 @@ const GroupDetail = () => {
   const { groupId } = useParams()
   const navigate = useNavigate()
   const { userProfile } = useAuth()
+  const { groups, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
   const [copiedId, setCopiedId] = useState(false)
 
-  // Demo guruh ma'lumotlari
-  const [group] = useState({
+  // Guruhni umumiy ma'lumotlardan topish
+  const groupFromContext = groups.find(g => g.id === groupId)
+  
+  const [group] = useState(groupFromContext || {
     id: groupId,
     name: 'JavaScript Boshlangich',
     subject: 'JavaScript',
@@ -55,12 +59,16 @@ const GroupDetail = () => {
 
   const handleRemoveStudent = (studentId) => {
     if (confirm('O\'quvchini guruhdan chiqarishni xohlaysizmi?')) {
+      const student = students.find(s => s.id === studentId)
       setStudents(students.filter(s => s.id !== studentId))
+      addActivity({ title: (student?.name || 'O\'quvchi') + ' guruhdan chiqarildi', type: 'info' })
+      addNotification((student?.name || 'O\'quvchi') + ' ' + group.name + ' guruhidan chiqarildi')
     }
   }
 
   const handleLeaveGroup = () => {
     if (confirm('Guruhdan chiqishni xohlaysizmi?')) {
+      addActivity({ title: group.name + ' guruhidan chiqildi', type: 'info' })
       navigate('/groups')
     }
   }

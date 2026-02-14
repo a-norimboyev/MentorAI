@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useAppData } from '../context/AppDataContext'
 import { useNavigate } from 'react-router-dom'
 import { 
   GraduationCap, 
@@ -21,48 +22,13 @@ import Sidebar from '../components/Sidebar'
 const Groups = () => {
   const { userProfile } = useAuth()
   const navigate = useNavigate()
+  const { groups, addGroup, removeGroup, pendingRequests, addPendingRequest, addNotification, addActivity } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
   const [loading, setLoading] = useState(false)
-
-  // Demo guruhlar (keyinroq Firebase dan keladi)
-  const [groups, setGroups] = useState([
-    {
-      id: 'JS-2024',
-      name: 'JavaScript Boshlangich',
-      subject: 'JavaScript',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 30,
-      currentStudents: 24,
-      createdAt: '2024-01-15'
-    },
-    {
-      id: 'PY-2024',
-      name: 'Python Advanced',
-      subject: 'Python',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 25,
-      currentStudents: 18,
-      createdAt: '2024-02-01'
-    },
-    {
-      id: 'REACT-01',
-      name: 'React.js Kursi',
-      subject: 'React',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 20,
-      currentStudents: 20,
-      createdAt: '2024-02-10'
-    }
-  ])
-
-  // Talaba uchun kutilayotgan so'rovlar
-  const [pendingRequests, setPendingRequests] = useState([
-    { groupId: 'NODE-01', groupName: 'Node.js Backend', status: 'pending' }
-  ])
 
   const copyToClipboard = (id) => {
     navigator.clipboard.writeText(id)
@@ -72,7 +38,8 @@ const Groups = () => {
 
   const handleDeleteGroup = (groupId) => {
     if (confirm('Guruhni o\'chirishni xohlaysizmi?')) {
-      setGroups(groups.filter(g => g.id !== groupId))
+      removeGroup(groupId)
+      addActivity({ title: 'Guruh o\'chirildi', type: 'info' })
     }
   }
 
@@ -247,13 +214,17 @@ const Groups = () => {
 
         {/* Guruh yaratish modali (Ustoz) */}
         {showCreateModal && <CreateGroupModal onClose={() => setShowCreateModal(false)} onCreated={(group) => {
-          setGroups([...groups, group])
+          addGroup(group)
+          addNotification("Yangi guruh yaratildi: " + group.name)
+          addActivity({ title: "Yangi guruh yaratildi: " + group.name, type: 'success' })
           setShowCreateModal(false)
         }} />}
 
         {/* Guruhga qo'shilish modali (Talaba) */}
         {showJoinModal && <JoinGroupModal onClose={() => setShowJoinModal(false)} onRequested={(req) => {
-          setPendingRequests([...pendingRequests, req])
+          addPendingRequest(req)
+          addNotification("Guruhga qo'shilish so'rovi yuborildi: " + req.groupName)
+          addActivity({ title: "Guruhga so'rov yuborildi: " + req.groupName, type: 'info' })
           setShowJoinModal(false)
         }} />}
       </main>
