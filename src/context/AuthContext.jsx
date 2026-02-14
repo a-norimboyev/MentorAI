@@ -153,6 +153,23 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe()
   }, [])
 
+  // Profilni yangilash
+  const updateUserProfile = async (data) => {
+    try {
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), {
+          ...userProfile,
+          ...data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true })
+        setUserProfile(prev => ({ ...prev, ...data }))
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      throw error
+    }
+  }
+
   const value = {
     user,
     userProfile,
@@ -161,7 +178,8 @@ export const AuthProvider = ({ children }) => {
     login,
     loginWithGoogle,
     logout,
-    fetchUserProfile
+    fetchUserProfile,
+    updateUserProfile
   }
 
   return (

@@ -1,14 +1,15 @@
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { User, Bell, Shield, Globe, Palette, LogOut, Camera, Save, Moon, Sun, Mail, Phone } from 'lucide-react'
+import { useAppData } from '../context/AppDataContext'
+import { User, Bell, Shield, Globe, Palette, LogOut, Camera, Save, Moon, Sun, Mail, Phone, Check, Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import { signOut } from 'firebase/auth'
+import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import { useNavigate } from 'react-router-dom'
 
 const Settings = () => {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, updateUserProfile } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const isTeacher = userProfile?.userType === 'teacher'
@@ -43,9 +44,28 @@ const Settings = () => {
     }
   }
 
-  const handleSave = () => {
-    // Demo - save functionality would go here
-    alert("O'zgarishlar saqlandi!")
+  const [saveStatus, setSaveStatus] = useState('')
+  const [saving, setSaving] = useState(false)
+  const { addActivity, addNotification } = useAppData()
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      if (updateUserProfile) {
+        await updateUserProfile({
+          fullName: formData.fullName,
+          phone: formData.phone,
+          bio: formData.bio
+        })
+      }
+      setSaveStatus('success')
+      addActivity({ title: 'Profil yangilandi', type: 'success' })
+      setTimeout(() => setSaveStatus(''), 3000)
+    } catch (error) {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus(''), 3000)
+    }
+    setSaving(false)
   }
 
   return (
@@ -172,13 +192,20 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end mt-6">
+                <div className="flex items-center gap-4 justify-end mt-6">
+                  {saveStatus === 'success' && (
+                    <span className="flex items-center gap-1 text-green-400 text-sm"><Check className="w-4 h-4" /> Saqlandi!</span>
+                  )}
+                  {saveStatus === 'error' && (
+                    <span className="text-red-400 text-sm">Xatolik yuz berdi</span>
+                  )}
                   <button
                     onClick={handleSave}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition"
+                    disabled={saving}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg transition"
                   >
-                    <Save className="w-5 h-5" />
-                    Saqlash
+                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                    {saving ? 'Saqlanmoqda...' : 'Saqlash'}
                   </button>
                 </div>
               </div>
