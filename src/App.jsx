@@ -16,6 +16,7 @@ import AIChat from './pages/AIChat'
 import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
 import { ThemeProvider } from './context/ThemeContext'
+import { AppDataProvider } from './context/AppDataContext'
 
 // Protected Route komponenti
 const ProtectedRoute = ({ children }) => {
@@ -74,7 +75,9 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <AppDataProvider>
+            <AppRoutes />
+          </AppDataProvider>
         </AuthProvider>
       </ThemeProvider>
     </Router>
