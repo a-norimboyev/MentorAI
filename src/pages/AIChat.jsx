@@ -1,12 +1,14 @@
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
-import { Bot, Send, Sparkles, Code, BookOpen, Brain, RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import { isGeminiConfigured, sendMessageStream, startNewChat } from '../config/gemini'
+import { Bot, Send, Sparkles, Code, BookOpen, Brain, RefreshCw, Trash2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 
 const AIChat = () => {
   const { userProfile } = useAuth()
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const chatEndRef = useRef(null)
 
   // Demo AI chat tarixi
   const [chatHistory, setChatHistory] = useState([
@@ -26,31 +28,75 @@ const AIChat = () => {
     { icon: Sparkles, text: "Kod tekshirish", query: "Kodimni tekshirib bering" }
   ]
 
-  const handleSend = () => {
-    if (!message.trim()) return
+  // Auto scroll
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatHistory, isTyping])
 
+  // Yangi chat boshlash uchun sessiyani reset qilish
+  useEffect(() => {
+    if (isGeminiConfigured) {
+      startNewChat()
+    }
+  }, [])
+
+  const handleSend = async () => {
+    if (!message.trim() || isTyping) return
+
+    const userMsg = message.trim()
+    
     // Foydalanuvchi xabarini qo'shish
     const userMessage = {
-      id: chatHistory.length + 1,
+      id: Date.now(),
       role: 'user',
-      text: message,
+      text: userMsg,
       time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
     }
     setChatHistory(prev => [...prev, userMessage])
     setMessage('')
     setIsTyping(true)
 
-    // AI javobini simulatsiya qilish
-    setTimeout(() => {
-      const aiResponse = {
-        id: chatHistory.length + 2,
+    if (isGeminiConfigured) {
+      // Real AI javob - streaming
+      const aiMessageId = Date.now() + 1
+      const aiTime = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+      
+      // Bo'sh AI xabarini qo'shish
+      setChatHistory(prev => [...prev, {
+        id: aiMessageId,
         role: 'ai',
-        text: getAIResponse(message),
-        time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+        text: '',
+        time: aiTime
+      }])
+
+      try {
+        await sendMessageStream(userMsg, (streamedText) => {
+          setChatHistory(prev => prev.map(msg => 
+            msg.id === aiMessageId ? { ...msg, text: streamedText } : msg
+          ))
+        })
+      } catch (error) {
+        console.error('AI javob xatosi:', error)
+        setChatHistory(prev => prev.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, text: "Kechirasiz, xatolik yuz berdi. Iltimos qaytadan urinib ko'ring. ❌" } 
+            : msg
+        ))
       }
-      setChatHistory(prev => [...prev, aiResponse])
       setIsTyping(false)
-    }, 1500)
+    } else {
+      // Fallback - hardcoded javoblar
+      setTimeout(() => {
+        const aiResponse = {
+          id: Date.now() + 1,
+          role: 'ai',
+          text: getAIResponse(userMsg),
+          time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+        }
+        setChatHistory(prev => [...prev, aiResponse])
+        setIsTyping(false)
+      }, 1500)
+    }
   }
 
   const getAIResponse = (query) => {
@@ -70,6 +116,50 @@ const AIChat = () => {
     setMessage(query)
   }
 
+  const handleClearChat = () => {
+    setChatHistory([{
+      id: 1,
+      role: 'ai',
+      text: "Assalomu alaykum! Men MentorAI - sizning shaxsiy AI ustozingizman. 🤖 Dasturlash bo'yicha har qanday savollaringizga javob berishga tayorman. Qanday yordam bera olaman?",
+      time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+    }])
+    if (isGeminiConfigured) {
+      startNewChat()
+    }
+  }
+
+  // Markdown formatini oddiy render qilish
+  const renderText = (text) => {
+    // Code blocks
+    const parts = text.split(/(```[\s\S]*?```)/g)
+    return parts.map((part, i) => {
+      if (part.startsWith('```')) {
+        const codeContent = part.replace(/```(\w*)\n?/, '').replace(/```$/, '')
+        const lang = part.match(/```(\w*)/)?.[1] || ''
+        return (
+          <div key={i} className="my-3 rounded-lg overflow-hidden">
+            {lang && <div className="bg-slate-600 px-3 py-1 text-xs text-slate-300">{lang}</div>}
+            <pre className="bg-slate-900 p-3 overflow-x-auto">
+              <code className="text-sm text-green-400 font-mono">{codeContent.trim()}</code>
+            </pre>
+          </div>
+        )
+      }
+      // Bold text
+      const boldParts = part.split(/(\*\*[^*]+\*\*)/g)
+      return (
+        <span key={i}>
+          {boldParts.map((bp, j) => {
+            if (bp.startsWith('**') && bp.endsWith('**')) {
+              return <strong key={j} className="text-white font-semibold">{bp.slice(2, -2)}</strong>
+            }
+            return <span key={j}>{bp}</span>
+          })}
+        </span>
+      )
+    })
+  }
+
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
@@ -77,17 +167,29 @@ const AIChat = () => {
       <main className="ml-64 h-screen flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-linear-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-              <Bot className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-linear-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
+                <Bot className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                  AI Ustoz
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                </h1>
+                <p className="text-sm text-green-400">
+                  {isGeminiConfigured ? 'Online - Gemini AI bilan ishlaydi' : 'Demo rejim - API kalitini sozlang'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                AI Ustoz
-                <Sparkles className="w-4 h-4 text-yellow-400" />
-              </h1>
-              <p className="text-sm text-green-400">Online - Sizga yordam berishga tayyor</p>
-            </div>
+            <button
+              onClick={handleClearChat}
+              className="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+              title="Chatni tozalash"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="text-sm hidden md:inline">Yangi chat</span>
+            </button>
           </div>
         </div>
 
@@ -128,7 +230,7 @@ const AIChat = () => {
                     ? 'bg-blue-600 text-white rounded-br-none'
                     : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
                 }`}>
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  <div className="text-sm whitespace-pre-wrap">{msg.role === 'ai' ? renderText(msg.text) : msg.text}</div>
                 </div>
                 <p className={`text-xs text-slate-500 mt-1 ${msg.role === 'user' ? 'text-right' : ''}`}>
                   {msg.time}
@@ -138,7 +240,7 @@ const AIChat = () => {
           ))}
 
           {/* AI Typing Indicator */}
-          {isTyping && (
+          {isTyping && !chatHistory.some(m => m.role === 'ai' && m.text === '') && (
             <div className="flex justify-start">
               <div className="max-w-2xl">
                 <div className="flex items-center gap-2 mb-2">
@@ -154,6 +256,7 @@ const AIChat = () => {
               </div>
             </div>
           )}
+          <div ref={chatEndRef} />
         </div>
 
         {/* Input Area */}
@@ -176,7 +279,10 @@ const AIChat = () => {
             </button>
           </div>
           <p className="text-xs text-slate-500 mt-2 text-center">
-            AI Ustoz sizga dasturlash bo'yicha yordam beradi. Javoblar ma'lumot maqsadida beriladi.
+            {isGeminiConfigured 
+              ? "AI Ustoz Google Gemini bilan ishlaydi. Savollaringizga real javob beradi."
+              : "Demo rejim. Haqiqiy AI javoblari uchun Gemini API kalitini .env fayliga qo'shing."
+            }
           </p>
         </div>
       </main>
