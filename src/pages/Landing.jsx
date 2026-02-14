@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   GraduationCap, 
@@ -70,8 +71,59 @@ const Landing = () => {
       role: "O'qituvchi",
       text: "O'quvchilarimni kuzatish va feedback berish juda oson bo'ldi.",
       rating: 5
+    },
+    {
+      name: "Dilshod Aliyev",
+      role: "Backend Developer",
+      text: "AI bilan kod yozishni o'rganish juda qiziqarli bo'ldi. Har bir mavzuni chuqur tushuntiradi.",
+      rating: 5
+    },
+    {
+      name: "Madina Usmonova",
+      role: "Talaba",
+      text: "Matematika va fizikadan mashqlar juda yaxshi tuzilgan. Tushunish oson!",
+      rating: 5
+    },
+    {
+      name: "Jasur Xolmatov",
+      role: "Full Stack Developer",
+      text: "Guruh ishlari va loyiha asosida o'rganish metodikasi ajoyib natija beradi.",
+      rating: 5
+    },
+    {
+      name: "Sevara Qodirova",
+      role: "UX Designer",
+      text: "Dizayn kurslarini AI yordamida o'rganish yangi tajriba bo'ldi. Tavsiya qilaman!",
+      rating: 5
+    },
+    {
+      name: "Otabek Nazarov",
+      role: "Talaba",
+      text: "Shaxsiy o'quv rejasi tuzib berishi eng katta afzallik. Vaqtni tejaydi.",
+      rating: 5
+    },
+    {
+      name: "Kamola Mirzayeva",
+      role: "Data Analyst",
+      text: "Python va data science bo'yicha mashqlar professional darajada tayyorlangan.",
+      rating: 5
+    },
+    {
+      name: "Sardor Rahmatullayev",
+      role: "Mobile Developer",
+      text: "React Native kursini MentorAI orqali tugatdim. Sertifikat ham oldim!",
+      rating: 5
     }
   ]
+
+  const [currentTestimonial, setCurrentTestimonial] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % (testimonials.length - 2))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [testimonials.length])
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -213,40 +265,38 @@ const Landing = () => {
               Foydalanuvchilar fikri
             </h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                  ))}
+          <div className="relative overflow-hidden">
+            <div 
+              className="flex transition-transform duration-1500 ease-in-out gap-8"
+              style={{ transform: `translateX(-${currentTestimonial * (100 / 3 + 2.67)}%)` }}
+            >
+              {testimonials.map((testimonial, index) => (
+                <div key={index} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 min-w-[calc(33.333%-1.34rem)] shrink-0">
+                  <div className="flex gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    ))}
+                  </div>
+                  <p className="text-slate-300 mb-4">"{testimonial.text}"</p>
+                  <div>
+                    <div className="font-semibold text-white">{testimonial.name}</div>
+                    <div className="text-slate-400 text-sm">{testimonial.role}</div>
+                  </div>
                 </div>
-                <p className="text-slate-300 mb-4">"{testimonial.text}"</p>
-                <div>
-                  <div className="font-semibold text-white">{testimonial.name}</div>
-                  <div className="text-slate-400 text-sm">{testimonial.role}</div>
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-center gap-2 mt-8">
+            {[...Array(testimonials.length - 2)].map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentTestimonial(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  currentTestimonial === index ? 'bg-blue-500 w-6' : 'bg-slate-600 hover:bg-slate-500'
+                }`}
+              />
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center bg-linear-to-r from-blue-600 to-cyan-600 rounded-3xl p-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Hoziroq Boshlang!
-          </h2>
-          <p className="text-blue-100 mb-8 max-w-xl mx-auto">
-            Minglab o'quvchilar allaqachon MentorAI bilan o'qimoqda. Siz ham qo'shiling!
-          </p>
-          <Link 
-            to="/register" 
-            className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-slate-100 transition"
-          >
-            Bepul Ro'yxatdan O'tish <ArrowRight className="w-5 h-5" />
-          </Link>
         </div>
       </section>
 
