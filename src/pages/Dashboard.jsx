@@ -32,17 +32,41 @@ const Dashboard = () => {
   const notifRef = useRef(null)
 
   const isTeacher = userProfile?.userType === 'teacher'
+  const isSelfLearner = userProfile?.userType === 'self-learner'
 
-  const searchPages = [
+  // Mustaqil o'rganuvchi onboarding tugatmaganini tekshirish
+  useEffect(() => {
+    if (isSelfLearner && userProfile && !userProfile.onboardingCompleted) {
+      if (userProfile.field) {
+        navigate('/onboarding', { 
+          state: { 
+            field: userProfile.field, 
+            fieldName: userProfile.fieldName,
+            category: userProfile.category,
+            categoryName: userProfile.categoryName 
+          } 
+        })
+      } else {
+        navigate('/select-field')
+      }
+    }
+  }, [isSelfLearner, userProfile, navigate])
+
+  const allSearchPages = [
     { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'bosh sahifa', 'asosiy'] },
-    { label: 'Guruhlar', path: '/groups', keywords: ['guruh', 'groups', 'sinf'] },
+    { label: 'Guruhlar', path: '/groups', keywords: ['guruh', 'groups', 'sinf'], hideFor: ['self-learner'] },
     { label: 'Darslar', path: '/lessons', keywords: ['dars', 'lessons', 'kurs'] },
     { label: 'Mashqlar', path: '/exercises', keywords: ['mashq', 'exercises', 'topshiriq'] },
-    { label: 'AI Ustoz', path: '/ai-chat', keywords: ['ai', 'ustoz', 'chat', 'suhbat'] },
-    { label: 'Xabarlar', path: '/messages', keywords: ['xabar', 'messages', 'chat'] },
+    { label: 'AI Ustoz', path: '/ai-chat', keywords: ['ai', 'ustoz', 'chat', 'suhbat'], hideFor: ['teacher'] },
+    { label: 'Xabarlar', path: '/messages', keywords: ['xabar', 'messages', 'chat'], hideFor: ['self-learner'] },
     { label: 'Reja', path: '/schedule', keywords: ['reja', 'schedule', 'jadval', 'kalendar'] },
     { label: 'Sozlamalar', path: '/settings', keywords: ['sozlama', 'settings', 'profil'] },
   ]
+
+  const searchPages = allSearchPages.filter(page => {
+    if (!page.hideFor) return true
+    return !page.hideFor.includes(userProfile?.userType)
+  })
 
   const filteredPages = searchQuery.trim()
     ? searchPages.filter(page =>
@@ -87,10 +111,14 @@ const Dashboard = () => {
           <div className="flex items-center justify-between px-8 py-4">
             <div>
               <h1 className="text-2xl font-bold text-white">
-                Salom, {userProfile?.name?.split(' ')[0] || userProfile?.fullName?.split(' ')[0] || 'Foydalanuvchi'}! í±‹
+                Salom, {userProfile?.name?.split(' ')[0] || userProfile?.fullName?.split(' ')[0] || 'Foydalanuvchi'}! ðŸŽ“
               </h1>
               <p className="text-slate-400">
-                {isTeacher ? "O'quvchilaringiz sizni kutmoqda" : "Bugun nima o'rganamiz?"}
+                {isTeacher 
+                  ? "O'quvchilaringiz sizni kutmoqda" 
+                  : isSelfLearner && userProfile?.fieldName 
+                    ? `${userProfile.fieldName} bo'yicha o'rganishni davom eting` 
+                    : "Bugun nima o'rganamiz?"}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -277,7 +305,7 @@ const Dashboard = () => {
                   <p className="text-slate-400 text-sm">
                     {remainingLessons > 0
                       ? "Ajoyib! Maqsadga yetish uchun yana " + remainingLessons + " ta dars qoldi."
-                      : "Tabriklaymiz! Barcha darslar tugallandi! í¾‰"
+                      : "Tabriklaymiz! Barcha darslar tugallandi! ðŸŽ‰"
                     }
                   </p>
                 </div>
