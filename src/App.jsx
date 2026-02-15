@@ -5,6 +5,10 @@ import Login from './pages/Login'
 import SelectRole from './pages/SelectRole'
 import RegisterStudent from './pages/RegisterStudent'
 import RegisterTeacher from './pages/RegisterTeacher'
+import RegisterSelfLearner from './pages/RegisterSelfLearner'
+import SelectField from './pages/SelectField'
+import Onboarding from './pages/Onboarding'
+import Roadmap from './pages/Roadmap'
 import Dashboard from './pages/Dashboard'
 import Groups from './pages/Groups'
 import Requests from './pages/Requests'
@@ -56,6 +60,10 @@ function AppRoutes() {
       <Route path="/register" element={<AuthRoute><SelectRole /></AuthRoute>} />
       <Route path="/register/student" element={<AuthRoute><RegisterStudent /></AuthRoute>} />
       <Route path="/register/teacher" element={<AuthRoute><RegisterTeacher /></AuthRoute>} />
+      <Route path="/register/self-learner" element={<AuthRoute><RegisterSelfLearner /></AuthRoute>} />
+      <Route path="/select-field" element={<ProtectedRoute><SelectField /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
