@@ -22,30 +22,48 @@ const Sidebar = () => {
   const location = useLocation()
   
   const isTeacher = userProfile?.userType === 'teacher'
+  const isSelfLearner = userProfile?.userType === 'self-learner'
 
   const handleLogout = async () => {
     await logout()
     navigate('/')
   }
 
-  const menuItems = isTeacher ? [
-    { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
-    { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
-    { icon: <Users className="w-5 h-5" />, label: "So'rovlar", path: "/requests" },
-    { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
-    { icon: <MessageSquare className="w-5 h-5" />, label: "Xabarlar", path: "/messages" },
-    { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
-    { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
-  ] : [
-    { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
-    { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
-    { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
-    { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
-    { icon: <Bot className="w-5 h-5" />, label: "AI Ustoz", path: "/ai-chat" },
-    { icon: <MessageSquare className="w-5 h-5" />, label: "Xabarlar", path: "/messages" },
-    { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
-    { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
-  ]
+  const getMenuItems = () => {
+    if (isTeacher) {
+      return [
+        { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+        { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
+        { icon: <Users className="w-5 h-5" />, label: "So'rovlar", path: "/requests" },
+        { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
+        { icon: <MessageSquare className="w-5 h-5" />, label: "Xabarlar", path: "/messages" },
+        { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
+        { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
+      ]
+    }
+    if (isSelfLearner) {
+      return [
+        { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+        { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
+        { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
+        { icon: <Bot className="w-5 h-5" />, label: "AI Ustoz", path: "/ai-chat" },
+        { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
+        { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
+      ]
+    }
+    return [
+      { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+      { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
+      { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
+      { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
+      { icon: <Bot className="w-5 h-5" />, label: "AI Ustoz", path: "/ai-chat" },
+      { icon: <MessageSquare className="w-5 h-5" />, label: "Xabarlar", path: "/messages" },
+      { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
+      { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
+    ]
+  }
+
+  const menuItems = getMenuItems()
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-slate-800 border-r border-slate-700 z-40">
@@ -97,7 +115,7 @@ const Sidebar = () => {
               {userProfile?.name || user?.displayName || 'Foydalanuvchi'}
             </p>
             <p className="text-slate-400 text-sm">
-              {isTeacher ? 'Ustoz' : "O'quvchi"}
+              {isTeacher ? 'Ustoz' : isSelfLearner ? "Mustaqil o'rganuvchi" : "O'quvchi"}
             </p>
           </div>
         </div>
