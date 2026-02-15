@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { GraduationCap, User, ArrowRight } from 'lucide-react'
+import { GraduationCap, User, ArrowRight, BookOpen } from 'lucide-react'
 
 const SelectRole = () => {
   return (
@@ -51,6 +51,23 @@ const SelectRole = () => {
                 </div>
               </div>
               <ArrowRight className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition" />
+            </Link>
+
+            {/* Self-learner Option */}
+            <Link
+              to="/register/self-learner"
+              className="flex items-center justify-between p-6 rounded-xl border-2 border-slate-600 hover:border-purple-500 hover:bg-purple-500/10 transition group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <BookOpen className="w-7 h-7 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Mustaqil o'rganuvchi</h3>
+                  <p className="text-slate-400 text-sm">O'zingiz mustaqil o'rganing</p>
+                </div>
+              </div>
+              <ArrowRight className="w-6 h-6 text-slate-400 group-hover:text-purple-500 transition" />
             </Link>
           </div>
 
