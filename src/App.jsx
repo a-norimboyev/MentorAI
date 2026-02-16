@@ -9,6 +9,7 @@ import RegisterSelfLearner from './pages/RegisterSelfLearner'
 import SelectField from './pages/SelectField'
 import Onboarding from './pages/Onboarding'
 import Roadmap from './pages/Roadmap'
+import Course from './pages/Course'
 import Dashboard from './pages/Dashboard'
 import Groups from './pages/Groups'
 import Requests from './pages/Requests'
@@ -64,6 +65,7 @@ function AppRoutes() {
       <Route path="/select-field" element={<ProtectedRoute><SelectField /></ProtectedRoute>} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
+      <Route path="/course" element={<ProtectedRoute><Course /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
