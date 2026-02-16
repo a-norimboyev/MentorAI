@@ -248,7 +248,7 @@ const Onboarding = () => {
         technologies: answers.tech,
         onboardingCompleted: true,
       })
-      navigate('/roadmap', {
+      navigate('/course', {
         state: { field, fieldName, category, categoryName }
       })
     } catch (err) {
