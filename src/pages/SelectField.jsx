@@ -13,6 +13,7 @@ const categories = [
     emoji: '💻',
     icon: Globe,
     color: 'from-cyan-500 to-blue-600',
+    shadow: 'shadow-cyan-500/30',
     bg: 'bg-cyan-500/10',
     border: 'border-cyan-500/30',
     text: 'text-cyan-400',
@@ -28,6 +29,7 @@ const categories = [
     emoji: '📱',
     icon: Smartphone,
     color: 'from-green-500 to-emerald-600',
+    shadow: 'shadow-green-500/30',
     bg: 'bg-green-500/10',
     border: 'border-green-500/30',
     text: 'text-green-400',
@@ -43,6 +45,7 @@ const categories = [
     emoji: '🤖',
     icon: Brain,
     color: 'from-purple-500 to-violet-600',
+    shadow: 'shadow-purple-500/30',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
     text: 'text-purple-400',
@@ -58,6 +61,7 @@ const categories = [
     emoji: '🖥',
     icon: Monitor,
     color: 'from-slate-400 to-slate-600',
+    shadow: 'shadow-slate-400/30',
     bg: 'bg-slate-400/10',
     border: 'border-slate-400/30',
     text: 'text-slate-300',
@@ -71,6 +75,7 @@ const categories = [
     emoji: '🎮',
     icon: Gamepad2,
     color: 'from-red-500 to-orange-600',
+    shadow: 'shadow-red-500/30',
     bg: 'bg-red-500/10',
     border: 'border-red-500/30',
     text: 'text-red-400',
@@ -85,6 +90,7 @@ const categories = [
     emoji: '🧪',
     icon: FlaskConical,
     color: 'from-amber-500 to-yellow-600',
+    shadow: 'shadow-amber-500/30',
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/30',
     text: 'text-amber-400',
@@ -99,6 +105,7 @@ const categories = [
     emoji: '🎨',
     icon: PenTool,
     color: 'from-pink-500 to-rose-600',
+    shadow: 'shadow-pink-500/30',
     bg: 'bg-pink-500/10',
     border: 'border-pink-500/30',
     text: 'text-pink-400',
@@ -179,15 +186,18 @@ const SelectField = () => {
                   className="relative p-6 rounded-xl border-2 bg-slate-800/50 border-slate-700 hover:border-slate-500 transition-all duration-200 text-left group hover:scale-[1.02]"
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-linear-to-r ${cat.color} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-6 h-6 text-white" />
+                    <div className="relative shrink-0">
+                      <div className={`absolute inset-0 w-14 h-14 rounded-2xl bg-linear-to-br ${cat.color} blur-md opacity-40 group-hover:opacity-60 transition-opacity`} />
+                      <div className={`relative w-14 h-14 rounded-2xl bg-linear-to-br ${cat.color} flex items-center justify-center shadow-xl ${cat.shadow} ring-1 ring-white/10`}>
+                        <div className="absolute inset-0 rounded-2xl bg-linear-to-b from-white/20 to-transparent" />
+                        <Icon className="relative w-7 h-7 text-white drop-shadow-lg" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">{cat.emoji}</span>
-                        <h3 className="font-semibold text-white">{cat.name}</h3>
+                        <h3 className="font-semibold text-white text-[15px]">{cat.name}</h3>
                       </div>
-                      <p className="text-slate-500 text-sm">
+                      <p className="text-slate-500 text-sm leading-relaxed">
                         {cat.subFields.map(s => s.name).join(' · ')}
                       </p>
                     </div>
