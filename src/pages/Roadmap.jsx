@@ -409,10 +409,10 @@ const Roadmap = () => {
         {/* Action Button */}
         <div className="flex justify-center mt-10">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/course', { state: { field, fieldName, category, categoryName } })}
             className="flex items-center gap-3 px-10 py-4 rounded-xl font-medium text-lg bg-linear-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg hover:scale-105 transition-all duration-200"
           >
-            O'rganishni boshlash
+            Kursni boshlash
             <ArrowRight className="w-6 h-6" />
           </button>
         </div>
