@@ -301,46 +301,9 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <GraduationCap className="w-8 h-8 text-blue-500" />
-                <span className="text-xl font-bold text-white">MentorAI</span>
-              </div>
-              <p className="text-slate-400">
-                AI asosidagi zamonaviy ta'lim platformasi
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Platforma</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Kurslar</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Mashqlar</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">AI Ustoz</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Kompaniya</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Biz haqimizda</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Blog</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Karyera</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Aloqa</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-slate-400 hover:text-white transition">Yordam</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">info@mentorai.uz</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-white transition">+998 90 123 45 67</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-slate-700 pt-8 text-center text-slate-400">
-            <p>© 2026 MentorAI. Barcha huquqlar himoyalangan.</p>
-          </div>
+      <footer className="border-t border-slate-700 py-8 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-slate-400 text-sm">MentorAI — Barcha huquqlar himoyalangan</p>
         </div>
       </footer>
     </div>
