@@ -196,7 +196,12 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat, index) => (
               <div key={index} className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-                <div className={"w-12 h-12 rounded-xl flex items-center justify-center mb-4 " + stat.color + " bg-opacity-10"} style={{backgroundColor: 'currentColor', opacity: 0.1}}>
+                <div className={"w-12 h-12 rounded-xl flex items-center justify-center mb-4 " + (
+                  stat.color === 'text-blue-500' ? 'bg-blue-500/10' :
+                  stat.color === 'text-green-500' ? 'bg-green-500/10' :
+                  stat.color === 'text-purple-500' ? 'bg-purple-500/10' :
+                  stat.color === 'text-yellow-500' ? 'bg-yellow-500/10' : 'bg-slate-700'
+                )}>
                   <span className={stat.color}>{stat.icon}</span>
                 </div>
                 <p className="text-slate-400 text-sm mb-1">{stat.label}</p>
