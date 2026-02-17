@@ -16,7 +16,7 @@ const Settings = () => {
   
   const [activeTab, setActiveTab] = useState('profile')
   const [formData, setFormData] = useState({
-    fullName: userProfile?.fullName || '',
+    fullName: userProfile?.fullName || userProfile?.name || '',
     email: user?.email || '',
     phone: userProfile?.phone || '',
     bio: userProfile?.bio || ''
@@ -54,6 +54,7 @@ const Settings = () => {
       if (updateUserProfile) {
         await updateUserProfile({
           fullName: formData.fullName,
+          name: formData.fullName,
           phone: formData.phone,
           bio: formData.bio
         })
@@ -119,14 +120,14 @@ const Settings = () => {
                 <div className="flex items-center gap-6 mb-8">
                   <div className="relative">
                     <div className="w-24 h-24 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-3xl font-bold text-white">
-                      {userProfile?.fullName?.charAt(0) || 'U'}
+                      {userProfile?.fullName?.charAt(0) || userProfile?.name?.charAt(0) || 'U'}
                     </div>
                     <button className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition">
                       <Camera className="w-4 h-4" />
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white">{userProfile?.fullName || 'Foydalanuvchi'}</h3>
+                    <h3 className="text-lg font-semibold text-white">{userProfile?.fullName || userProfile?.name || 'Foydalanuvchi'}</h3>
                     <p className="text-slate-400">{isTeacher ? "O'qituvchi" : "O'quvchi"}</p>
                     {isTeacher && (
                       <span className="inline-block mt-2 px-3 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-full">
