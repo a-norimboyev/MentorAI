@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { 
   BookOpen, Play, CheckCircle2, Lock, ChevronRight, ChevronDown, 
   Clock, ArrowLeft, ArrowRight, Loader2, Sparkles, 
@@ -381,6 +382,7 @@ const Course = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const contentRef = useRef(null)
 
   // field ma'lumotlarini olish
@@ -537,7 +539,7 @@ Qoidalar:
   const isLastLesson = activeChapter === chapters.length - 1 && activeLesson === currentChapter.lessons.length - 1
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className={`flex h-screen bg-slate-900 ${collapsed ? 'pl-21.25' : 'pl-64'} transition-all duration-300`}>
       <Sidebar />
 
       <div className="flex-1 flex overflow-hidden">

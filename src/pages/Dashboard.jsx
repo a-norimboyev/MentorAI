@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { 
   BookOpen, 
   MessageSquare, 
@@ -19,6 +20,7 @@ import {
 
 const Dashboard = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const navigate = useNavigate()
   const {
     completedLessons, totalStudyHours, completedExercises, totalPoints,
@@ -106,7 +108,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
-      <main className="ml-64">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} transition-all duration-300`}>
         <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-30">
           <div className="flex items-center justify-between px-8 py-4">
             <div>

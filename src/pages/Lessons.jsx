@@ -1,4 +1,5 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { BookOpen, Plus, Play, Clock, Users, Search, Filter, X, ArrowLeft, CheckCircle } from 'lucide-react'
@@ -7,13 +8,14 @@ import { useNavigate } from 'react-router-dom'
 
 const Lessons = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const { lessons, updateLessonProgress, addLesson, addActivity, addNotification } = useAppData()
   const navigate = useNavigate()
   const isTeacher = userProfile?.userType === 'teacher'
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newLesson, setNewLesson] = useState({ title: '', description: '', duration: '', category: 'Dasturlash', thumbnail: 'í³š' })
+  const [newLesson, setNewLesson] = useState({ title: '', description: '', duration: '', category: 'Dasturlash', thumbnail: 'ï¿½ï¿½ï¿½' })
 
   const filteredLessons = lessons.filter(lesson => 
     lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -32,7 +34,7 @@ const Lessons = () => {
     updateLessonProgress(lessonId, newProgress)
     if (newProgress === 100) {
       addActivity({ title: "Dars tugallandi: " + selectedLesson.title, type: 'success' })
-      addNotification("Tabriklaymiz! \"" + selectedLesson.title + "\" darsi tugallandi! í¾‰")
+      addNotification("Tabriklaymiz! \"" + selectedLesson.title + "\" darsi tugallandi! ï¿½ï¿½ï¿½")
     }
     setSelectedLesson(prev => ({ ...prev, progress: newProgress }))
   }
@@ -52,7 +54,7 @@ const Lessons = () => {
     addLesson(lesson)
     addNotification("Yangi dars qo'shildi: " + lesson.title)
     addActivity({ title: "Yangi dars yaratildi: " + lesson.title, type: 'success' })
-    setNewLesson({ title: '', description: '', duration: '', category: 'Dasturlash', thumbnail: 'í³š' })
+    setNewLesson({ title: '', description: '', duration: '', category: 'Dasturlash', thumbnail: 'ï¿½ï¿½ï¿½' })
     setShowAddModal(false)
   }
 
@@ -62,7 +64,7 @@ const Lessons = () => {
     return (
       <div className="min-h-screen bg-slate-900">
         <Sidebar />
-        <main className="ml-64 p-8">
+        <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} p-8 transition-all duration-300`}>
           <button onClick={() => setSelectedLesson(null)} className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition">
             <ArrowLeft className="w-5 h-5" /> Ortga
           </button>
@@ -135,7 +137,7 @@ const Lessons = () => {
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
-      <main className="ml-64 p-8">
+      <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} p-8 transition-all duration-300`}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Darslar</h1>
@@ -219,7 +221,7 @@ const Lessons = () => {
                 <div>
                   <label className="block text-sm text-slate-400 mb-2">Emoji</label>
                   <div className="flex gap-2">
-                    {['í³š', 'í¿¨', 'âš›ï¸', 'í¿¢', 'í´·', 'í°™', 'í¾¨', 'í´¥'].map(e => (
+                    {['ï¿½ï¿½ï¿½', 'ï¿½ï¿½ï¿½', 'âš›ï¸', 'ï¿½ï¿½ï¿½', 'ï¿½ï¿½ï¿½', 'ï¿½ï¿½ï¿½', 'ï¿½ï¿½ï¿½', 'ï¿½ï¿½ï¿½'].map(e => (
                       <button key={e} onClick={() => setNewLesson(p => ({...p, thumbnail: e}))} className={"w-10 h-10 rounded-lg text-xl flex items-center justify-center " + (newLesson.thumbnail === e ? 'bg-blue-600 ring-2 ring-blue-400' : 'bg-slate-700 hover:bg-slate-600')}>{e}</button>
                     ))}
                   </div>
