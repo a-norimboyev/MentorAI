@@ -1,4 +1,5 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { Calendar, Clock, Target, CheckCircle, Circle, Plus, ChevronLeft, ChevronRight, X } from 'lucide-react'
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 
 const Schedule = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const { dailyTasks, toggleDailyTask, addDailyTask, completedDailyTasks,
           lessons, completedLessons, completedExercises, exercises, addActivity, addNotification } = useAppData()
   const navigate = useNavigate()
@@ -112,7 +114,7 @@ const Schedule = () => {
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
-      <main className="ml-64 p-8">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} p-8 transition-all duration-300`}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">O'quv Rejasi</h1>

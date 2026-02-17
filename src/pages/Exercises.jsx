@@ -1,4 +1,5 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { Target, Plus, CheckCircle, Clock, Star, Trophy, Filter, Search, X, Upload, Calendar, Video, Tag, FileText, Trash2 } from 'lucide-react'
@@ -6,6 +7,7 @@ import { useState, useRef } from 'react'
 
 const Exercises = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const { exercises, toggleExercise, addExercise, totalPoints, completedExercises, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
   const [filter, setFilter] = useState('all')
@@ -95,7 +97,7 @@ const Exercises = () => {
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
-      <main className="ml-64 p-8">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} p-8 transition-all duration-300`}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Mashqlar</h1>

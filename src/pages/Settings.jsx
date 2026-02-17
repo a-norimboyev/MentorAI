@@ -1,4 +1,5 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useAppData } from '../context/AppDataContext'
@@ -11,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 const Settings = () => {
   const { user, userProfile, updateUserProfile } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { collapsed } = useSidebar()
   const navigate = useNavigate()
   const isTeacher = userProfile?.userType === 'teacher'
   
@@ -73,7 +75,7 @@ const Settings = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className="ml-64 p-8">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} p-8 transition-all duration-300`}>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Sozlamalar</h1>
