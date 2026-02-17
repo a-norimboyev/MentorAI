@@ -18,11 +18,13 @@ import {
   Clock
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 
 const GroupDetail = () => {
   const { groupId } = useParams()
   const navigate = useNavigate()
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const { groups, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
   const [copiedId, setCopiedId] = useState(false)
@@ -83,7 +85,7 @@ const GroupDetail = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className="ml-64">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} transition-all duration-300`}>
         {/* Header */}
         <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-30">
           <div className="flex items-center justify-between px-8 py-4">

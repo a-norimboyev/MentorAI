@@ -1,4 +1,5 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { isGeminiConfigured, sendMessageStream, startNewChat } from '../config/gemini'
 import { Bot, Send, Sparkles, Code, BookOpen, Brain, RefreshCw, Trash2 } from 'lucide-react'
@@ -6,6 +7,7 @@ import { useState, useRef, useEffect } from 'react'
 
 const AIChat = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const chatEndRef = useRef(null)
@@ -164,7 +166,7 @@ const AIChat = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className="ml-64 h-screen flex flex-col">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} h-screen flex flex-col transition-all duration-300`}>
         {/* Header */}
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center justify-between">

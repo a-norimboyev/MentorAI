@@ -1,10 +1,12 @@
 import Sidebar from '../components/Sidebar'
+import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { MessageSquare, Send, Search, Users, User, MoreVertical, Check, CheckCheck } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 const Messages = () => {
   const { userProfile } = useAuth()
+  const { collapsed } = useSidebar()
   const isTeacher = userProfile?.userType === 'teacher'
   const [selectedChat, setSelectedChat] = useState(1)
   const [message, setMessage] = useState('')
@@ -173,7 +175,7 @@ const Messages = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className="ml-64 h-screen flex">
+      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} h-screen flex transition-all duration-300`}>
         {/* Chat List */}
         <div className="w-80 border-r border-slate-700 flex flex-col">
           {/* Header */}
