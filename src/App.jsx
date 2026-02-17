@@ -20,8 +20,11 @@ import Messages from './pages/Messages'
 import AIChat from './pages/AIChat'
 import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
+import Quizzes from './pages/Quizzes'
+import Analytics from './pages/Analytics'
 import { ThemeProvider } from './context/ThemeContext'
 import { AppDataProvider } from './context/AppDataContext'
+import { SidebarProvider } from './context/SidebarContext'
 
 // Protected Route komponenti
 const ProtectedRoute = ({ children }) => {
@@ -76,6 +79,8 @@ function AppRoutes() {
       <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
       <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
     </Routes>
   )
 }
@@ -86,7 +91,9 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <AppDataProvider>
-            <AppRoutes />
+            <SidebarProvider>
+              <AppRoutes />
+            </SidebarProvider>
           </AppDataProvider>
         </AuthProvider>
       </ThemeProvider>

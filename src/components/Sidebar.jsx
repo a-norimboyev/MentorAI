@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import { useSidebar } from '../context/SidebarContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { 
   GraduationCap, 
@@ -13,11 +14,16 @@ import {
   Target,
   Bell,
   FolderOpen,
-  Bot
+  Bot,
+  PanelLeftClose,
+  PanelLeft,
+  ClipboardCheck,
+  TrendingUp
 } from 'lucide-react'
 
 const Sidebar = () => {
   const { user, userProfile, logout } = useAuth()
+  const { collapsed, toggleSidebar } = useSidebar()
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -46,6 +52,8 @@ const Sidebar = () => {
         { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
         { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
         { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
+        { icon: <ClipboardCheck className="w-5 h-5" />, label: "Testlar", path: "/quizzes" },
+        { icon: <TrendingUp className="w-5 h-5" />, label: "Tahlil", path: "/analytics" },
         { icon: <Bot className="w-5 h-5" />, label: "AI Ustoz", path: "/ai-chat" },
         { icon: <Calendar className="w-5 h-5" />, label: "Reja", path: "/schedule" },
         { icon: <Settings className="w-5 h-5" />, label: "Sozlamalar", path: "/settings" }
@@ -66,14 +74,23 @@ const Sidebar = () => {
   const menuItems = getMenuItems()
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-slate-800 border-r border-slate-700 z-40 sidebar-light">
+    <aside className={`fixed left-0 top-0 h-full ${collapsed ? 'w-21.25' : 'w-64'} bg-slate-800 border-r border-slate-700 z-40 sidebar-light transition-all duration-300`}>
       {/* Logo */}
-      <div 
-        className="flex items-center gap-2 p-6 border-b border-slate-700 cursor-pointer"
-        onClick={() => navigate('/dashboard')}
-      >
-        <GraduationCap className="w-8 h-8 text-blue-500" />
-        <span className="text-xl font-bold text-white">MentorAI</span>
+      <div className="flex items-center justify-between p-6 border-b border-slate-700">
+        <div 
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => navigate('/dashboard')}
+        >
+          <GraduationCap className="w-8 h-8 text-blue-500 shrink-0" />
+          {!collapsed && <span className="text-xl font-bold text-white">MentorAI</span>}
+        </div>
+        <button
+          onClick={toggleSidebar}
+          className="text-slate-400 hover:text-white hover:bg-slate-700 p-1.5 rounded-lg transition shrink-0"
+          title={collapsed ? "Sidebar ochish" : "Sidebar yopish"}
+        >
+          {collapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+        </button>
       </div>
 
       {/* Menu */}
@@ -85,14 +102,15 @@ const Sidebar = () => {
               <li key={index}>
                 <button
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  title={collapsed ? item.label : ''}
+                  className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-4 py-3 rounded-lg transition ${
                     isActive 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:bg-slate-700 hover:text-white'
                   }`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  {!collapsed && <span>{item.label}</span>}
                 </button>
               </li>
             )
@@ -102,30 +120,51 @@ const Sidebar = () => {
 
       {/* User Info */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-            {userProfile?.photoURL ? (
-              <img src={userProfile.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
-            ) : (
-              <User className="w-5 h-5 text-white" />
-            )}
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              {userProfile?.photoURL ? (
+                <img src={userProfile.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Chiqish"
+              className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20 rounded-lg transition"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">
-              {userProfile?.name || user?.displayName || 'Foydalanuvchi'}
-            </p>
-            <p className="text-slate-400 text-sm">
-              {isTeacher ? 'Ustoz' : isSelfLearner ? "Mustaqil o'rganuvchi" : "O'quvchi"}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Chiqish</span>
-        </button>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                {userProfile?.photoURL ? (
+                  <img src={userProfile.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-white" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium truncate">
+                  {userProfile?.name || user?.displayName || 'Foydalanuvchi'}
+                </p>
+                <p className="text-slate-400 text-sm">
+                  {isTeacher ? 'Ustoz' : isSelfLearner ? "Mustaqil o'rganuvchi" : "O'quvchi"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20 rounded-lg transition"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Chiqish</span>
+            </button>
+          </>
+        )}
       </div>
     </aside>
   )
