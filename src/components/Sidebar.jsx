@@ -66,7 +66,7 @@ const Sidebar = () => {
   const menuItems = getMenuItems()
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-slate-800 border-r border-slate-700 z-40">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-slate-800 border-r border-slate-700 z-40 sidebar-light">
       {/* Logo */}
       <div 
         className="flex items-center gap-2 p-6 border-b border-slate-700 cursor-pointer"
