@@ -47,7 +47,7 @@ const Landing = () => {
   ]
 
   const stats = [
-    { value: "10,000+", label: "Faol O'quvchilar" },
+    { value: "5", label: "Faol O'quvchilar" },
     { value: "500+", label: "Mashqlar" },
     { value: "50+", label: "Ustozlar" },
     { value: "98%", label: "Mamnunlik" }
@@ -121,7 +121,7 @@ const Landing = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTestimonial((prev) => (prev + 1) % (testimonials.length - 2))
-    }, 1000)
+    }, 4000)
     return () => clearInterval(interval)
   }, [testimonials.length])
 
