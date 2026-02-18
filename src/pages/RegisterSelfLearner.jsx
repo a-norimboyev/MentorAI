@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GraduationCap, Mail, Lock, Eye, EyeOff, User, Loader2, ArrowLeft, BookOpen } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 const RegisterSelfLearner = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -43,7 +44,7 @@ const RegisterSelfLearner = () => {
     
     const errors = validateForm()
     if (errors.length > 0) {
-      setError(errors[0])
+      toast.error(errors[0])
       return
     }
 
@@ -52,10 +53,13 @@ const RegisterSelfLearner = () => {
     
     try {
       await register(formData.email, formData.password, formData.name, 'self-learner')
+      toast.success('Muvaffaqiyatli ro\'yxatdan o\'tdingiz!')
       navigate('/select-field')
     } catch (err) {
       console.error('Registration error:', err)
-      setError(getErrorMessage(err.code))
+      const errorMsg = getErrorMessage(err.code)
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }

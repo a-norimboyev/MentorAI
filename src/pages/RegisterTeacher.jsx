@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GraduationCap, Mail, Lock, Eye, EyeOff, User, Loader2, ArrowLeft, Briefcase } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 const RegisterTeacher = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -46,7 +47,7 @@ const RegisterTeacher = () => {
     
     const errors = validateForm()
     if (errors.length > 0) {
-      setError(errors[0])
+      toast.error(errors[0])
       return
     }
 
@@ -55,10 +56,13 @@ const RegisterTeacher = () => {
     
     try {
       await register(formData.email, formData.password, formData.name, 'teacher')
+      toast.success('Muvaffaqiyatli ro\'yxatdan o\'tdingiz!')
       navigate('/dashboard')
     } catch (err) {
       console.error('Registration error:', err)
-      setError(getErrorMessage(err.code))
+      const errorMsg = getErrorMessage(err.code)
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }

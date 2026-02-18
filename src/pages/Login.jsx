@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -33,7 +34,7 @@ const Login = () => {
     
     const errors = validateForm()
     if (errors.length > 0) {
-      setError(errors[0])
+      toast.error(errors[0])
       return
     }
 
@@ -42,9 +43,12 @@ const Login = () => {
     
     try {
       await login(formData.email, formData.password)
+      toast.success('Muvaffaqiyatli kirdingiz!')
       navigate('/dashboard')
     } catch (err) {
-      setError(getErrorMessage(err.code))
+      const errorMsg = getErrorMessage(err.code)
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -56,9 +60,12 @@ const Login = () => {
     
     try {
       await loginWithGoogle()
+      toast.success('Google orqali muvaffaqiyatli kirdingiz!')
       navigate('/dashboard')
     } catch (err) {
-      setError(getErrorMessage(err.code))
+      const errorMsg = getErrorMessage(err.code)
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }

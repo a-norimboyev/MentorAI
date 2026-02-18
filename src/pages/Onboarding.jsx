@@ -5,6 +5,7 @@ import {
   Loader2, ArrowLeft, ArrowRight, CheckCircle2
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 // Har bir sub-field uchun texnologiyalar
 const techOptions = {
@@ -236,7 +237,7 @@ const Onboarding = () => {
   const handleFinish = async () => {
     const errors = validateAnswers()
     if (errors.length > 0) {
-      alert('Iltimos, barcha soʻrovlarga javob bering:\n' + errors.join('\n'))
+      toast.error('Iltimos, barcha so\'rovlarga javob bering:\n' + errors.join('\n'))
       return
     }
 
@@ -258,7 +259,7 @@ const Onboarding = () => {
       navigate('/dashboard')
     } catch (err) {
       console.error('Error saving onboarding:', err)
-      alert('Profil saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib koʻring.')
+      toast.error('Profil saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.')
     } finally {
       setLoading(false)
     }
