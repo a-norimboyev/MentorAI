@@ -1,4 +1,7 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { useAuth } from './AuthContext'
+import { db } from '../config/firebase'
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
 
 const AppDataContext = createContext(null)
 
@@ -11,6 +14,77 @@ export const useAppData = () => {
 }
 
 export const AppDataProvider = ({ children }) => {
+  const { user } = useAuth()
+  
+  // =================== REAL-TIME LISTENERS SETUP ===================
+  useEffect(() => {
+    if (!user) return
+
+    // Notifications real-time listener
+    try {
+      const notifQuery = query(
+        collection(db, 'users', user.uid, 'notifications'),
+        where('read', '==', false)
+      )
+      const unsubscribeNotif = onSnapshot(notifQuery, (snapshot) => {
+        const notifs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          text: doc.data().text,
+          time: doc.data().createdAt?.toDate() || new Date(),
+          read: doc.data().read
+        }))
+        setNotifications(prev => [...notifs, ...prev.filter(n => n.read)].slice(0, 20))
+      })
+      return () => unsubscribeNotif()
+    } catch (error) {
+      console.error('Error setting up notifications listener:', error)
+    }
+  }, [user])
+
+  // =================== LOAD PROGRESS FROM FIRESTORE ===================
+  useEffect(() => {
+    if (!user) return
+
+    const loadProgressFromFirestore = async () => {
+      try {
+        // Load lesson progress
+        const lessonProgRef = collection(db, 'users', user.uid, 'lessonProgress')
+        const lessonProgSnap = await getDocs(lessonProgRef)
+        const lessonProgress = {}
+        lessonProgSnap.forEach(doc => {
+          lessonProgress[doc.id] = doc.data().progress || 0
+        })
+
+        // Update lessons with saved progress
+        setLessons(prev => prev.map(lesson => ({
+          ...lesson,
+          progress: lessonProgress[lesson.id] || lesson.progress
+        })))
+
+        // Load exercise completion
+        const exerciseCompRef = collection(db, 'users', user.uid, 'exerciseCompletion')
+        const exerciseCompSnap = await getDocs(exerciseCompRef)
+        const completedExerciseIds = new Set()
+        let totalPoints = 0
+        
+        exerciseCompSnap.forEach(doc => {
+          completedExerciseIds.add(doc.id)
+          totalPoints += doc.data().points || 0
+        })
+
+        // Update exercises with saved completion status
+        setExercises(prev => prev.map(exercise => ({
+          ...exercise,
+          completed: completedExerciseIds.has(String(exercise.id))
+        })))
+      } catch (error) {
+        console.error('Error loading progress from Firestore:', error)
+      }
+    }
+
+    loadProgressFromFirestore()
+  }, [user])
+
   // =================== GURUHLAR ===================
   const [groups, setGroups] = useState([
     {

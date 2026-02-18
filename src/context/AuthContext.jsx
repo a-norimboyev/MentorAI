@@ -8,7 +8,7 @@ import {
   signInWithPopup,
   updateProfile
 } from 'firebase/auth'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../config/firebase'
 
 const AuthContext = createContext(null)
@@ -69,7 +69,10 @@ export const AuthProvider = ({ children }) => {
         email,
         name,
         userType, // 'student' yoki 'teacher'
-        photoURL: null
+        photoURL: null,
+        selectedTech: null,
+        technologies: [],
+        onboardingCompleted: false
       })
 
       return result.user
@@ -105,7 +108,10 @@ export const AuthProvider = ({ children }) => {
           email: result.user.email,
           name: result.user.displayName,
           userType: 'student', // Default student
-          photoURL: result.user.photoURL
+          photoURL: result.user.photoURL,
+          selectedTech: null,
+          technologies: [],
+          onboardingCompleted: false
         })
         await fetchUserProfile(result.user.uid)
       }
@@ -128,16 +134,25 @@ export const AuthProvider = ({ children }) => {
 
   // Auth state kuzatish
   useEffect(() => {
-    let unsubscribe = () => {}
+    let unsubscribeAuth = () => {}
+    let unsubscribeProfile = () => {}
     
     try {
-      unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         setUser(user)
         if (user) {
           try {
-            await fetchUserProfile(user.uid)
+            // Real-time profile listener o'rnatish
+            const userDocRef = doc(db, 'users', user.uid)
+            unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+              if (docSnap.exists()) {
+                setUserProfile(docSnap.data())
+              }
+            }, (error) => {
+              console.error('Profile snapshot error:', error)
+            })
           } catch (err) {
-            console.error('Profile fetch error:', err)
+            console.error('Profile listener setup error:', err)
           }
         }
         setLoading(false)
@@ -150,7 +165,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
     }
 
-    return () => unsubscribe()
+    return () => {
+      unsubscribeAuth()
+      unsubscribeProfile()
+    }
   }, [])
 
   // Profilni yangilash
@@ -170,6 +188,79 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Dars progresini Firestore ga saqlash
+  const saveLessonProgress = async (lessonId, progress) => {
+    try {
+      if (user) {
+        const progressRef = doc(db, 'users', user.uid, 'lessonProgress', String(lessonId))
+        await updateDoc(progressRef, {
+          progress,
+          updatedAt: serverTimestamp()
+        }).catch(async () => {
+          // Agar document yo'q bo'lsa, yangi document yaratish
+          await setDoc(progressRef, {
+            lessonId,
+            progress,
+            completedAt: progress === 100 ? serverTimestamp() : null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          })
+        })
+      }
+    } catch (error) {
+      console.error('Error saving lesson progress:', error)
+    }
+  }
+
+  // Mashq tugallashni Firestore ga saqlash
+  const saveExerciseCompletion = async (exerciseId, points, difficulty) => {
+    try {
+      if (user) {
+        const exerciseRef = doc(db, 'users', user.uid, 'exerciseCompletion', String(exerciseId))
+        await updateDoc(exerciseRef, {
+          completed: true,
+          completedAt: serverTimestamp(),
+          points,
+          difficulty
+        }).catch(async () => {
+          // Agar document yo'q bo'lsa, yangi document yaratish
+          await setDoc(exerciseRef, {
+            exerciseId,
+            completed: true,
+            points,
+            difficulty,
+            completedAt: serverTimestamp(),
+            createdAt: serverTimestamp()
+          })
+        })
+        
+        // Jami ballni yangilash
+        const currentPoints = userProfile?.totalPoints || 0
+        await updateUserProfile({
+          totalPoints: currentPoints + points
+        })
+      }
+    } catch (error) {
+      console.error('Error saving exercise completion:', error)
+    }
+  }
+
+  // Faoliyatni Firestore ga saqlash
+  const saveActivity = async (title, type = 'info') => {
+    try {
+      if (user) {
+        const activityRef = doc(db, 'users', user.uid, 'activities', Date.now().toString())
+        await setDoc(activityRef, {
+          title,
+          type,
+          createdAt: serverTimestamp()
+        })
+      }
+    } catch (error) {
+      console.error('Error saving activity:', error)
+    }
+  }
+
   const value = {
     user,
     userProfile,
@@ -179,7 +270,10 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogle,
     logout,
     fetchUserProfile,
-    updateUserProfile
+    updateUserProfile,
+    saveLessonProgress,
+    saveExerciseCompletion,
+    saveActivity
   }
 
   return (
