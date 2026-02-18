@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
+import { Toaster } from 'react-hot-toast'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
 import SelectRole from './pages/SelectRole'
 import RegisterStudent from './pages/RegisterStudent'
 import RegisterTeacher from './pages/RegisterTeacher'
@@ -62,6 +64,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+      <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
       <Route path="/register" element={<AuthRoute><SelectRole /></AuthRoute>} />
       <Route path="/register/student" element={<AuthRoute><RegisterStudent /></AuthRoute>} />
       <Route path="/register/teacher" element={<AuthRoute><RegisterTeacher /></AuthRoute>} />
@@ -89,6 +92,29 @@ function AppRoutes() {
 function App() {
   return (
     <ErrorBoundary>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1e293b',
+            color: '#fff',
+            border: '1px solid #334155',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Router>
         <ThemeProvider>
           <AuthProvider>
