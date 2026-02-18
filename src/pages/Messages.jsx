@@ -175,7 +175,7 @@ const Messages = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} h-screen flex transition-all duration-300`}>
+      <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} h-screen flex transition-all duration-300`}>
         {/* Chat List */}
         <div className="w-80 border-r border-slate-700 flex flex-col">
           {/* Header */}
