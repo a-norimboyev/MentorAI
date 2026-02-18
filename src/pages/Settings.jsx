@@ -75,7 +75,7 @@ const Settings = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} p-8 transition-all duration-300`}>
+      <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} p-8 transition-all duration-300`}>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Sozlamalar</h1>
