@@ -6,10 +6,12 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
+  sendEmailVerification
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../config/firebase'
+import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
 
@@ -62,6 +64,17 @@ export const AuthProvider = ({ children }) => {
       
       // Profilni yangilash
       await updateProfile(result.user, { displayName: name })
+      
+      // Email tasdiqlash yuborish
+      try {
+        await sendEmailVerification(result.user)
+        toast.success('Tasdiqlash havolasi emailingizga yuborildi!', {
+          duration: 5000,
+        })
+      } catch (verificationError) {
+        console.error('Email verification error:', verificationError)
+        toast.error('Email tasdiqlash yuborishda xatolik')
+      }
       
       // Firestore da profil yaratish
       await createUserProfile(result.user.uid, {
