@@ -18,20 +18,36 @@ const RegisterStudent = () => {
   const { register } = useAuth()
   const navigate = useNavigate()
 
+  const validateForm = () => {
+    const errors = []
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const nameRegex = /^[a-zA-Za-z\s]{2,}$/
+    
+    if (!formData.name.trim()) errors.push('Ism kiritish majbur')
+    else if (!nameRegex.test(formData.name.trim())) errors.push('Ism kamida 2 ta harf bo\'lishi kerak')
+    
+    if (!formData.email.trim()) errors.push('Email kiritish majbur')
+    else if (!emailRegex.test(formData.email)) errors.push('Email formati noto\'g\'ri')
+    
+    if (!formData.password.trim()) errors.push('Parol kiritish majbur')
+    else if (formData.password.length < 8) errors.push('Parol kamida 8 ta belgidan iborat bo\'lishi kerak')
+    
+    if (!formData.confirmPassword.trim()) errors.push('Parolni tasdiqlash majbur')
+    else if (formData.password !== formData.confirmPassword) errors.push('Parollar mos kelmaydi')
+    
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    const errors = validateForm()
+    if (errors.length > 0) {
+      setError(errors[0])
+      return
+    }
+
     setError('')
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError('Parollar mos kelmaydi')
-      return
-    }
-    
-    if (formData.password.length < 8) {
-      setError('Parol kamida 8 ta belgidan iborat bo\'lishi kerak')
-      return
-    }
-    
     setLoading(true)
     
     try {

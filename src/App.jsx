@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import SelectRole from './pages/SelectRole'
@@ -87,17 +88,19 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppDataProvider>
-            <SidebarProvider>
-              <AppRoutes />
-            </SidebarProvider>
-          </AppDataProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppDataProvider>
+              <SidebarProvider>
+                <AppRoutes />
+              </SidebarProvider>
+            </AppDataProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </Router>
+    </ErrorBoundary>
   )
 }
 

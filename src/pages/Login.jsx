@@ -15,8 +15,28 @@ const Login = () => {
   const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
+  const validateForm = () => {
+    const errors = []
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    
+    if (!formData.email.trim()) errors.push('Email kiritish majbur')
+    else if (!emailRegex.test(formData.email)) errors.push('Email formati noto\'g\'ri')
+    
+    if (!formData.password.trim()) errors.push('Parol kiritish majbur')
+    else if (formData.password.length < 6) errors.push('Parol kamida 6 belgidan iborat bo\'lishi kerak')
+    
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    const errors = validateForm()
+    if (errors.length > 0) {
+      setError(errors[0])
+      return
+    }
+
     setError('')
     setLoading(true)
     

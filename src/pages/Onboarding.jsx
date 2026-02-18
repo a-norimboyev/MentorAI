@@ -8,22 +8,12 @@ import { useAuth } from '../context/AuthContext'
 
 // Har bir sub-field uchun texnologiyalar
 const techOptions = {
-  // Web - Frontend
+  // Web - Frontend (CSS only)
   frontend: [
-    { id: 'html', name: 'HTML', emoji: '🌐', desc: 'Web sahifalar tuzilmasi va asosi' },
     { id: 'css', name: 'CSS', emoji: '🎨', desc: 'Dizayn va stillar berish' },
-    { id: 'javascript', name: 'JavaScript', emoji: '⚡', desc: 'Saytga interaktivlik qo\'shish' },
-    { id: 'typescript', name: 'TypeScript', emoji: '🔷', desc: 'JavaScript + tip xavfsizligi' },
-    { id: 'react', name: 'React.js', emoji: '⚛️', desc: 'Komponentli UI kutubxonasi' },
-    { id: 'vue', name: 'Vue.js', emoji: '💚', desc: 'Yengil va tez UI framework' },
-    { id: 'angular', name: 'Angular', emoji: '🅰️', desc: 'Google tomonidan qo\'llab-quvvatlanadi' },
-    { id: 'nextjs', name: 'Next.js', emoji: '▲', desc: 'React asosidagi fullstack framework' },
-    { id: 'svelte', name: 'Svelte', emoji: '🔥', desc: 'Kompilyatsiya qilinadigan UI framework' },
     { id: 'tailwind', name: 'Tailwind CSS', emoji: '💨', desc: 'Utility-first CSS framework' },
     { id: 'bootstrap', name: 'Bootstrap', emoji: '🟪', desc: 'Tayyor UI komponentlar to\'plami' },
     { id: 'sass', name: 'Sass/SCSS', emoji: '💅', desc: 'CSS preprocessor - kengaytirilgan stillar' },
-    { id: 'git', name: 'Git & GitHub', emoji: '🐙', desc: 'Versiya nazorati va hamkorlik' },
-    { id: 'figma-fe', name: 'Figma (asoslar)', emoji: '🖌', desc: 'Dizaynni tushunish va ishlash' },
   ],
   // Web - Backend
   backend: [
@@ -233,7 +223,23 @@ const Onboarding = () => {
     }
   }
 
+  const validateAnswers = () => {
+    const errors = []
+    if (!answers.age) errors.push('Yosh oralig\'ini tanlang')
+    if (!answers.hours) errors.push('Kunlik soatlarni tanlang')
+    if (!answers.english) errors.push('English darajasini tanlang')
+    if (!answers.experience) errors.push('Tajribani tanlang')
+    if (!answers.tech || answers.tech.length === 0) errors.push('Texnologiyani tanlang')
+    return errors
+  }
+
   const handleFinish = async () => {
+    const errors = validateAnswers()
+    if (errors.length > 0) {
+      alert('Iltimos, barcha soʻrovlarga javob bering:\n' + errors.join('\n'))
+      return
+    }
+
     setLoading(true)
     try {
       await updateUserProfile({
@@ -246,13 +252,13 @@ const Onboarding = () => {
         experience: answers.experience,
         ageRange: answers.age,
         technologies: answers.tech,
+        selectedTech: answers.tech[0] || null, // Birinchi texnologiya asosiy
         onboardingCompleted: true,
       })
-      navigate('/course', {
-        state: { field, fieldName, category, categoryName }
-      })
+      navigate('/dashboard')
     } catch (err) {
       console.error('Error saving onboarding:', err)
+      alert('Profil saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib koʻring.')
     } finally {
       setLoading(false)
     }
