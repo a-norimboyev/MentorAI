@@ -123,7 +123,7 @@ const Requests = () => {
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
       
-      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} transition-all duration-300`}>
+      <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} transition-all duration-300`}>
         {/* Header */}
         <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-30">
           <div className="flex items-center justify-between px-8 py-4">

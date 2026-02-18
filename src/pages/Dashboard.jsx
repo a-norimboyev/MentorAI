@@ -108,20 +108,26 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-slate-900">
       <Sidebar />
-      <main className={`${collapsed ? 'ml-[85px]' : 'ml-64'} transition-all duration-300`}>
+      <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} transition-all duration-300`}>
         <header className="sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-30">
           <div className="flex items-center justify-between px-8 py-4">
             <div>
               <h1 className="text-2xl font-bold text-white">
                 Salom, {userProfile?.name?.split(' ')[0] || userProfile?.fullName?.split(' ')[0] || 'Foydalanuvchi'}! 🎓
               </h1>
-              <p className="text-slate-400">
-                {isTeacher 
-                  ? "O'quvchilaringiz sizni kutmoqda" 
-                  : isSelfLearner && userProfile?.fieldName 
-                    ? `${userProfile.fieldName} bo'yicha o'rganishni davom eting` 
-                    : "Bugun nima o'rganamiz?"}
-              </p>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-slate-400">
+                  {isTeacher 
+                    ? "O'quvchilaringiz sizni kutmoqda" 
+                    : isSelfLearner ? "CSS o'rganishni davom eting" : "Guruh a'zolaringiz bilan ishlang"
+                  }
+                </p>
+                {userProfile?.selectedTech && (
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-full font-medium">
+                    {userProfile.selectedTech.toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
