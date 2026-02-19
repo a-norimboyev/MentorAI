@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useAppData } from '../context/AppDataContext'
 import { User, Bell, Shield, Globe, Palette, LogOut, Camera, Save, Moon, Sun, Mail, Phone, Check, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
-import { auth } from '../config/firebase'
+import { auth, storage } from '../config/firebase'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
 const Settings = () => {
   const { user, userProfile, updateUserProfile } = useAuth()
@@ -48,6 +50,8 @@ const Settings = () => {
 
   const [saveStatus, setSaveStatus] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef(null)
   const { addActivity, addNotification } = useAppData()
 
   const handleSave = async () => {
@@ -63,12 +67,48 @@ const Settings = () => {
       }
       setSaveStatus('success')
       addActivity({ title: 'Profil yangilandi', type: 'success' })
+      toast.success('Profil saqlandi')
       setTimeout(() => setSaveStatus(''), 3000)
     } catch (error) {
       setSaveStatus('error')
+      toast.error('Xatolik yuz berdi')
       setTimeout(() => setSaveStatus(''), 3000)
     }
     setSaving(false)
+  }
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!user?.uid) {
+      toast.error('Foydalanuvchi topilmadi')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Rasm 5MB dan kichik bolmalidi')
+      return
+    }
+
+    setUploadingPhoto(true)
+    try {
+      const storageRef = ref(storage, `profile-pictures/${user.uid}/avatar`)
+      const snapshot = await uploadBytes(storageRef, file)
+      const photoURL = await getDownloadURL(snapshot.ref)
+
+      await updateUserProfile({
+        photoURL
+      })
+
+      toast.success('Rasm yangilandi')
+      addActivity({ title: 'Profil rasmini ozgarttirdi', type: 'success' })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Rasm yuklashda xatolik')
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   return (
@@ -120,12 +160,25 @@ const Settings = () => {
                 
                 {/* Avatar */}
                 <div className="flex items-center gap-6 mb-8">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
                   <div className="relative">
-                    <div className="w-24 h-24 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-3xl font-bold text-white">
-                      {userProfile?.fullName?.charAt(0) || userProfile?.name?.charAt(0) || 'U'}
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition">
-                      <Camera className="w-4 h-4" />
+                    <img
+                      src={userProfile?.photoURL || `https://ui-avatars.com/api/?name=${userProfile?.fullName || userProfile?.name || 'User'}&background=3b82f6&color=fff`}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-blue-500"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                     </button>
                   </div>
                   <div>
