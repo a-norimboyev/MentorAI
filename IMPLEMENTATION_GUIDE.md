@@ -3,27 +3,36 @@
 ## ✅ Bajarilgan Ishlar (7/7 COMPLETE)
 
 ### 1. 🔐 Firestore Security Rules
+
 **File:** `FIRESTORE_RULES.md`
+
 - User data: faqat o'z ma'lumotlariga kirish
 - Group access: faqat a'zolar o'qi oladi
 - Teachers: o'z guruhlarini boshqa'radi
 - Public readings available
 
 **Joylashtirish:**
+
 Firebase Console → Firestore → Rules tab → copy-paste qilish
 
 ### 2. 🔒 Firebase Storage Rules
+
 **File:** `STORAGE_RULES.md`
+
 - Profile pictures: 5MB max
 - Exercise files: 10MB max
 - User-owned access control
 
 **Joylashtirish:**
+
 Firebase Console → Storage → Rules tab → copy-paste qilish
 
 ### 3. 📸 Profile Picture Upload
+
 **File:** `src/pages/Settings.jsx`
+
 **Xususiyatlar:**
+
 - Camera button click → rasm tanlash
 - Firebase Storagega upload
 - Real-time preview
@@ -32,6 +41,7 @@ Firebase Console → Storage → Rules tab → copy-paste qilish
 - Size validation (5MB max)
 
 **Ishlash:**
+
 ```javascript
 - User clicks camera button
 - File dialog opens
@@ -42,7 +52,9 @@ Firebase Console → Storage → Rules tab → copy-paste qilish
 
 ### 4. ⏳ Loading States
 **File:** `src/components/LoadingSpinner.jsx`
+
 **Ishlatish:**
+
 ```jsx
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -52,7 +64,9 @@ if (loading) return <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." />
 
 ### 5. 👥 Groups Backend
 **File:** `src/utils/groupService.js`
+
 **Funksiyalar:**
+
 - `createGroup()` - Yangi guruh yaratish
 - `joinGroupByCode()` - Guruh kodiga qo'shilish
 - `approveStudentRequest()` - Student tasdiqkash
@@ -78,7 +92,9 @@ if (loading) return <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." />
 
 ### 6. 📅 Schedule Backend
 **File:** `src/utils/scheduleService.js`
+
 **Funksiyalar:**
+
 - `createScheduleEvent()` - Dars qo'shish
 - `updateScheduleEvent()` - Darsni yangilash
 - `deleteScheduleEvent()` - Darsni o'chirish
@@ -100,7 +116,9 @@ if (loading) return <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." />
 
 ### 7. 🔍 Search Functionality
 **File:** `src/utils/searchService.js`
+
 **Funksiyalar:**
+
 - `searchLessons()` - Darslarni qidirish
 - `searchExercises()` - Mashqlarni qidirish
 - `searchGroups()` - Guruhlarni qidirish
@@ -108,6 +126,7 @@ if (loading) return <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." />
 - `globalSearch()` - Hammasi bo'yicha qidirish
 
 **Ishlash:**
+
 ```javascript
 // Global qidirivish
 const results = await globalSearch(userId, 'React')
@@ -119,6 +138,7 @@ const results = await globalSearch(userId, 'React')
 ## 📋 Integration Checklist
 
 ### Settings.jsx (Profile Picture)
+
 - [x] Import Storage functions
 - [x] Add file input reference
 - [x] Add upload state
@@ -128,6 +148,7 @@ const results = await globalSearch(userId, 'React')
 - [x] Toast notifications
 
 ### Groups.jsx (Future)
+
 ```javascript
 import * as GroupService from '../utils/groupService'
 
@@ -149,6 +170,7 @@ await GroupService.approveStudentRequest(groupId, requestId, studentId)
 ```
 
 ### Schedule.jsx (Future)
+
 ```javascript
 import * as ScheduleService from '../utils/scheduleService'
 
@@ -165,6 +187,7 @@ const upcoming = await ScheduleService.getUpcomingEvents(user.uid)
 ```
 
 ### Search (Future)
+
 ```javascript
 import * as SearchService from '../utils/searchService'
 
@@ -190,6 +213,7 @@ Nusxa: STORAGE_RULES.md dan
 ---
 
 ## 📦 Dependencies
+
 - `react-hot-toast` ✅ (installed)
 - `firebase` ✅ (v12.9.0)
 - `lucide-react` ✅ (icons)
