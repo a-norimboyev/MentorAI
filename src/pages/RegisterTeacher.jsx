@@ -23,7 +23,7 @@ const RegisterTeacher = () => {
   const validateForm = () => {
     const errors = []
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const nameRegex = /^[a-zA-Za-z\s]{2,}$/
+    const nameRegex = /^[\p{L}\s]{2,}$/u
     
     if (!formData.name.trim()) errors.push('Ism kiritish majbur')
     else if (!nameRegex.test(formData.name.trim())) errors.push('Ism kamida 2 ta harf bo\'lishi kerak')
@@ -55,9 +55,15 @@ const RegisterTeacher = () => {
     setLoading(true)
     
     try {
-      await register(formData.email, formData.password, formData.name, 'teacher')
-      toast.success('Muvaffaqiyatli ro\'yxatdan o\'tdingiz!')
-      navigate('/dashboard')
+      await register(
+        formData.email,
+        formData.password,
+        formData.name,
+        'teacher',
+        { subject: formData.subject }
+      )
+      toast.success('Ro\'yxatdan o\'tdingiz! Emailingizni tasdiqlang.')
+      navigate('/login')
     } catch (err) {
       console.error('Registration error:', err)
       const errorMsg = getErrorMessage(err.code)
