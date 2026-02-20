@@ -25,6 +25,7 @@ import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
 import Quizzes from './pages/Quizzes'
 import Analytics from './pages/Analytics'
+import SearchPage from './pages/Search'
 import { ThemeProvider } from './context/ThemeContext'
 import { AppDataProvider } from './context/AppDataContext'
 import { SidebarProvider } from './context/SidebarContext'
@@ -41,7 +42,14 @@ const ProtectedRoute = ({ children }) => {
     )
   }
   
-  return user ? children : <Navigate to="/login" />
+  if (!user) return <Navigate to="/login" />
+  
+  // Email tasdiqlanmagan bo'lsa login ga qaytarish
+  if (!user.emailVerified && user.providerData?.[0]?.providerId !== 'google.com') {
+    return <Navigate to="/login" />
+  }
+  
+  return children
 }
 
 // Auth sahifalarini himoya qilish (login bo'lganlar uchun)
@@ -85,6 +93,8 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+      <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
 }

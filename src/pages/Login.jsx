@@ -8,12 +8,14 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   
-  const { login, loginWithGoogle } = useAuth()
+  const { login, loginWithGoogle, resendVerificationEmail } = useAuth()
   const navigate = useNavigate()
 
   const validateForm = () => {
@@ -24,7 +26,7 @@ const Login = () => {
     else if (!emailRegex.test(formData.email)) errors.push('Email formati noto\'g\'ri')
     
     if (!formData.password.trim()) errors.push('Parol kiritish majbur')
-    else if (formData.password.length < 6) errors.push('Parol kamida 6 belgidan iborat bo\'lishi kerak')
+    else if (formData.password.length < 8) errors.push('Parol kamida 8 belgidan iborat bo\'lishi kerak')
     
     return errors
   }
@@ -39,6 +41,7 @@ const Login = () => {
     }
 
     setError('')
+    setNeedsVerification(false)
     setLoading(true)
     
     try {
@@ -47,6 +50,9 @@ const Login = () => {
       navigate('/dashboard')
     } catch (err) {
       const errorMsg = getErrorMessage(err.code)
+      if (err.code === 'auth/email-not-verified') {
+        setNeedsVerification(true)
+      }
       setError(errorMsg)
       toast.error(errorMsg)
     } finally {
@@ -56,6 +62,7 @@ const Login = () => {
   
   const handleGoogleLogin = async () => {
     setError('')
+    setNeedsVerification(false)
     setLoading(true)
     
     try {
@@ -70,6 +77,19 @@ const Login = () => {
       setLoading(false)
     }
   }
+
+  const handleResendVerification = async () => {
+    setResendLoading(true)
+    try {
+      await resendVerificationEmail()
+      toast.success('Tasdiqlash havolasi qayta yuborildi')
+    } catch (err) {
+      const errorMsg = getErrorMessage(err.code)
+      toast.error(errorMsg)
+    } finally {
+      setResendLoading(false)
+    }
+  }
   
   const getErrorMessage = (code) => {
     switch (code) {
@@ -81,6 +101,10 @@ const Login = () => {
         return 'Email formati noto\'g\'ri'
       case 'auth/too-many-requests':
         return 'Juda ko\'p urinish. Keyinroq qayta urinib ko\'ring'
+      case 'auth/email-not-verified':
+        return 'Email tasdiqlanmagan. Iltimos, emailingizni tekshiring.'
+      case 'auth/no-current-user':
+        return 'Foydalanuvchi topilmadi. Qayta kirib ko\'ring.'
       default:
         return 'Xatolik yuz berdi. Qayta urinib ko\'ring'
     }
@@ -158,6 +182,17 @@ const Login = () => {
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
+            )}
+
+            {needsVerification && (
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="w-full bg-slate-700/50 hover:bg-slate-700 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition"
+              >
+                {resendLoading ? 'Yuborilmoqda...' : 'Tasdiqlash havolasini qayta yuborish'}
+              </button>
             )}
 
             {/* Submit Button */}
