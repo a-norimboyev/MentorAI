@@ -6,7 +6,9 @@ import {
   ClipboardCheck, Play, CheckCircle, XCircle, Clock, Trophy, 
   ChevronRight, RotateCcw, Star, Zap, Brain, Target, X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { db } from '../config/firebase'
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore'
 
 const quizData = [
   {
@@ -234,7 +236,7 @@ const difficultyColor = {
 }
 
 const Quizzes = () => {
-  const { userProfile } = useAuth()
+  const { user, userProfile } = useAuth()
   const { collapsed } = useSidebar()
   const { addActivity, addNotification } = useAppData()
 
@@ -246,23 +248,58 @@ const Quizzes = () => {
   const [quizFinished, setQuizFinished] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
   const [quizHistory, setQuizHistory] = useState([])
+  
+  // Refs for stale closure prevention
+  const answersRef = useRef(answers)
+  const activeQuizRef = useRef(activeQuiz)
+  answersRef.current = answers
+  activeQuizRef.current = activeQuiz
+
+  // Firestore dan quiz tarixini yuklash
+  useEffect(() => {
+    if (!user) return
+    const loadHistory = async () => {
+      try {
+        const histRef = collection(db, 'users', user.uid, 'quizResults')
+        const q = query(histRef, orderBy('completedAt', 'desc'))
+        const snap = await getDocs(q)
+        const history = snap.docs.map(d => {
+          const data = d.data()
+          return {
+            ...data,
+            id: d.id,
+            date: data.completedAt?.toDate?.()?.toLocaleDateString('uz-UZ') || data.date
+          }
+        })
+        setQuizHistory(history)
+      } catch (e) {
+        console.error('Error loading quiz history:', e)
+      }
+    }
+    loadHistory()
+  }, [user])
 
   // Timer
-  useState(() => {
-    if (activeQuiz && !quizFinished && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            finishQuiz()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(timer)
+  useEffect(() => {
+    if (!activeQuiz || quizFinished || timeLeft <= 0) return
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [activeQuiz, quizFinished])
+
+  // Vaqt tugaganda testni yakunlash
+  useEffect(() => {
+    if (activeQuizRef.current && !quizFinished && timeLeft === 0) {
+      finishQuiz()
     }
-  }, [activeQuiz, quizFinished, timeLeft])
+  }, [timeLeft, quizFinished])
 
   const startQuiz = (quiz) => {
     setActiveQuiz(quiz)
@@ -297,21 +334,35 @@ const Quizzes = () => {
 
   const finishQuiz = () => {
     setQuizFinished(true)
-    const correctCount = answers.filter(a => a.selected === a.correct).length
-    const score = Math.round((correctCount / activeQuiz.questions.length) * 100)
+    const currentAnswers = answersRef.current
+    const quiz = activeQuizRef.current
+    if (!quiz) return
+    const correctCount = currentAnswers.filter(a => a.selected === a.correct).length
+    const score = Math.round((correctCount / quiz.questions.length) * 100)
     
-    setQuizHistory(prev => [...prev, {
-      quizId: activeQuiz.id,
-      title: activeQuiz.title,
+    const result = {
+      quizId: quiz.id,
+      title: quiz.title,
       score,
       correctCount,
-      totalQuestions: activeQuiz.questions.length,
+      totalQuestions: quiz.questions.length,
       date: new Date().toLocaleDateString('uz-UZ')
-    }])
+    }
 
-    addActivity({ title: `"${activeQuiz.title}" testi yakunlandi - ${score}%`, type: score >= 70 ? 'success' : 'info' })
+    setQuizHistory(prev => [...prev, result])
+
+    // Firestore ga saqlash
+    if (user) {
+      const histRef = collection(db, 'users', user.uid, 'quizResults')
+      addDoc(histRef, {
+        ...result,
+        completedAt: serverTimestamp()
+      }).catch(e => console.error('Error saving quiz result:', e))
+    }
+
+    addActivity({ title: `"${quiz.title}" testi yakunlandi - ${score}%`, type: score >= 70 ? 'success' : 'info' })
     if (score >= 80) {
-      addNotification(`🏆 "${activeQuiz.title}" testida a'lo natija - ${score}%!`)
+      addNotification(`🏆 "${quiz.title}" testida a'lo natija - ${score}%!`)
     }
   }
 

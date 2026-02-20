@@ -2,19 +2,53 @@ import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { Calendar, Clock, Target, CheckCircle, Circle, Plus, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useState } from 'react'
+import { Calendar, Clock, Target, CheckCircle, Circle, Plus, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createScheduleEvent, getUserScheduleEvents, deleteScheduleEvent } from '../utils/scheduleService'
 
 const Schedule = () => {
-  const { userProfile } = useAuth()
+  const { user, userProfile } = useAuth()
   const { collapsed } = useSidebar()
-  const { dailyTasks, toggleDailyTask, addDailyTask, completedDailyTasks,
+  const { dailyTasks, setDailyTasks, toggleDailyTask, addDailyTask, completedDailyTasks,
           lessons, completedLessons, completedExercises, exercises, addActivity, addNotification } = useAppData()
   const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', time: '', type: 'lesson' })
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
+
+  // Firestore dan schedule eventlarni yuklash
+  useEffect(() => {
+    const loadSchedule = async () => {
+      if (!user) return
+      setLoadingSchedule(true)
+      try {
+        const events = await getUserScheduleEvents(user.uid)
+        if (events.length > 0) {
+          const tasks = events.map(ev => ({
+            id: ev.id,
+            title: ev.title,
+            time: ev.time || '09:00 - 10:00',
+            type: ev.type || 'lesson',
+            completed: ev.completed || false,
+            firestoreId: ev.id
+          }))
+          // Mavjud tasklarni merge qilish, faqat yangilarini qo'shish
+          setDailyTasks(prev => {
+            const existingIds = new Set(prev.map(t => t.id))
+            const newTasks = tasks.filter(t => !existingIds.has(t.id))
+            return newTasks.length > 0 ? [...prev, ...newTasks] : prev.length === 0 ? tasks : prev
+          })
+        }
+      } catch (error) {
+        console.error('Error loading schedule:', error)
+      } finally {
+        setLoadingSchedule(false)
+      }
+    }
+    loadSchedule()
+  }, [user])
 
   const weekDays = ['Dush', 'Sesh', 'Chor', 'Pay', 'Juma', 'Shan', 'Yak']
 
@@ -40,16 +74,29 @@ const Schedule = () => {
     }
   }
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTask.title.trim()) return
-    addDailyTask({
+    const taskData = {
       title: newTask.title,
       time: newTask.time || '09:00 - 10:00',
       type: newTask.type,
-      completed: false
-    })
-    addNotification("Yangi vazifa qo'shildi: " + newTask.title)
-    addActivity({ title: "Yangi vazifa: " + newTask.title, type: 'info' })
+      completed: false,
+      date: selectedDate.toISOString().split('T')[0]
+    }
+    
+    try {
+      if (user) {
+        const eventId = await createScheduleEvent(user.uid, taskData)
+        addDailyTask({ ...taskData, id: eventId })
+      } else {
+        addDailyTask(taskData)
+      }
+      addNotification("Yangi vazifa qo'shildi: " + newTask.title)
+      addActivity({ title: "Yangi vazifa: " + newTask.title, type: 'info' })
+    } catch (error) {
+      console.error('Error adding task:', error)
+      addDailyTask(taskData)
+    }
     setNewTask({ title: '', time: '', type: 'lesson' })
     setShowAddTask(false)
   }

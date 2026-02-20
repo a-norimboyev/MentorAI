@@ -6,10 +6,12 @@ import {
   BarChart3, TrendingUp, Clock, Target, Trophy, BookOpen, 
   Calendar, Flame, ArrowUp, ArrowDown, Minus
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { db } from '../config/firebase'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 
 const Analytics = () => {
-  const { userProfile } = useAuth()
+  const { user, userProfile } = useAuth()
   const { collapsed } = useSidebar()
   const { 
     completedLessons, totalStudyHours, completedExercises, totalPoints,
@@ -17,66 +19,190 @@ const Analytics = () => {
   } = useAppData()
 
   const [period, setPeriod] = useState('week')
+  const [activityLog, setActivityLog] = useState([])
 
-  // Haftalik o'qish ma'lumotlari (demo)
-  const weeklyData = [
-    { day: 'Dush', hours: 2.5, lessons: 2, exercises: 3 },
-    { day: 'Sesh', hours: 1.8, lessons: 1, exercises: 2 },
-    { day: 'Chor', hours: 3.2, lessons: 3, exercises: 4 },
-    { day: 'Pay', hours: 0.5, lessons: 0, exercises: 1 },
-    { day: 'Jum', hours: 2.0, lessons: 2, exercises: 2 },
-    { day: 'Shan', hours: 4.0, lessons: 4, exercises: 5 },
-    { day: 'Yak', hours: 1.5, lessons: 1, exercises: 1 },
-  ]
+  // Firestore dan faoliyat logini yuklash
+  useEffect(() => {
+    if (!user) return
+    const loadActivityLog = async () => {
+      try {
+        const actRef = collection(db, 'users', user.uid, 'activities')
+        const actQuery = query(actRef, orderBy('createdAt', 'desc'))
+        const snap = await getDocs(actQuery)
+        const logs = snap.docs.map(d => {
+          const data = d.data()
+          return {
+            ...data,
+            id: d.id,
+            createdAt: data.createdAt?.toDate?.() || new Date()
+          }
+        })
+        setActivityLog(logs)
+      } catch (e) {
+        console.error('Error loading activity log:', e)
+      }
+    }
+    loadActivityLog()
+  }, [user])
 
-  const monthlyData = [
-    { week: '1-hafta', hours: 12, lessons: 8, exercises: 15 },
-    { week: '2-hafta', hours: 15, lessons: 10, exercises: 18 },
-    { week: '3-hafta', hours: 9, lessons: 6, exercises: 12 },
-    { week: '4-hafta', hours: 18, lessons: 12, exercises: 22 },
-  ]
+  // Haftalik / oylik ma'lumotlarni faoliyatlardan hisoblash
+  const { weeklyData, monthlyData } = useMemo(() => {
+    const now = new Date()
+    const dayNames = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan']
+    
+    // Haftalik (oxirgi 7 kun)
+    const weekly = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(now)
+      date.setDate(now.getDate() - (6 - i))
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      const dayEnd = new Date(dayStart)
+      dayEnd.setDate(dayEnd.getDate() + 1)
+      
+      const dayActivities = activityLog.filter(a => {
+        const t = a.createdAt
+        return t >= dayStart && t < dayEnd
+      })
+      
+      const lessonsCount = dayActivities.filter(a => 
+        a.type === 'success' || a.title?.includes('dars') || a.title?.includes('lesson')
+      ).length
+      const exercisesCount = dayActivities.filter(a => 
+        a.title?.includes('mashq') || a.title?.includes('exercise') || a.title?.includes('ball')
+      ).length
+      
+      return {
+        day: dayNames[date.getDay()],
+        hours: Math.round((lessonsCount * 0.5 + exercisesCount * 0.3) * 10) / 10,
+        lessons: lessonsCount,
+        exercises: exercisesCount
+      }
+    })
+
+    // Oylik (oxirgi 4 hafta)
+    const monthly = Array.from({ length: 4 }, (_, i) => {
+      const weekEnd = new Date(now)
+      weekEnd.setDate(now.getDate() - (i * 7))
+      const weekStart = new Date(weekEnd)
+      weekStart.setDate(weekEnd.getDate() - 7)
+      
+      const weekActivities = activityLog.filter(a => {
+        const t = a.createdAt
+        return t >= weekStart && t < weekEnd
+      })
+      
+      const lessonsCount = weekActivities.filter(a => 
+        a.type === 'success' || a.title?.includes('dars') || a.title?.includes('lesson')
+      ).length
+      const exercisesCount = weekActivities.filter(a => 
+        a.title?.includes('mashq') || a.title?.includes('exercise') || a.title?.includes('ball')
+      ).length
+      
+      return {
+        week: `${4 - i}-hafta`,
+        hours: Math.round((lessonsCount * 0.5 + exercisesCount * 0.3) * 10) / 10,
+        lessons: lessonsCount,
+        exercises: exercisesCount
+      }
+    }).reverse()
+
+    return { weeklyData: weekly, monthlyData: monthly }
+  }, [activityLog])
 
   const currentData = period === 'week' ? weeklyData : monthlyData
-  const maxHours = Math.max(...currentData.map(d => d.hours))
+  const maxHours = Math.max(...currentData.map(d => d.hours), 1)
   
   const totalWeekHours = weeklyData.reduce((s, d) => s + d.hours, 0)
   const totalWeekLessons = weeklyData.reduce((s, d) => s + d.lessons, 0)
   const totalWeekExercises = weeklyData.reduce((s, d) => s + d.exercises, 0)
   const avgDailyHours = (totalWeekHours / 7).toFixed(1)
 
-  // Streak hisoblash (demo)
-  const currentStreak = 5
-  const longestStreak = 12
+  // Streak (ketma-ket faol kunlar)
+  const { currentStreak, longestStreak } = useMemo(() => {
+    if (activityLog.length === 0) return { currentStreak: 0, longestStreak: 0 }
+    
+    const activeDays = new Set()
+    activityLog.forEach(a => {
+      const d = a.createdAt
+      activeDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`)
+    })
+    
+    let current = 0
+    let longest = 0
+    let streak = 0
+    const today = new Date()
+    
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      
+      if (activeDays.has(key)) {
+        streak++
+        if (i === 0 || current === i) current = streak
+        longest = Math.max(longest, streak)
+      } else {
+        if (i === 0) current = 0
+        streak = 0
+      }
+    }
+    
+    return { currentStreak: current, longestStreak: longest }
+  }, [activityLog])
 
   // Kategoriya bo'yicha tahlil
-  const categoryStats = [
-    { name: 'JavaScript', progress: 75, lessonsCount: 8, color: 'bg-yellow-500' },
-    { name: 'React', progress: 60, lessonsCount: 5, color: 'bg-cyan-500' },
-    { name: 'Python', progress: 40, lessonsCount: 3, color: 'bg-green-500' },
-    { name: 'CSS', progress: 90, lessonsCount: 10, color: 'bg-blue-500' },
-    { name: 'Git', progress: 55, lessonsCount: 4, color: 'bg-orange-500' },
-  ]
-
-  // Kuchli va zaif tomonlar
-  const strengths = [
-    { topic: "CSS & Layoutlar", score: 90, icon: "🎨" },
-    { topic: "JavaScript asoslari", score: 75, icon: "🟨" },
-    { topic: "Git version control", score: 70, icon: "🐙" },
-  ]
-
-  const weaknesses = [
-    { topic: "Python OOP", score: 30, icon: "🐍" },
-    { topic: "Backend API", score: 35, icon: "🔗" },
-    { topic: "TypeScript", score: 25, icon: "🔷" },
-  ]
+  const categoryStats = useMemo(() => {
+    const catMap = {}
+    
+    lessons.forEach(l => {
+      const cat = l.category || 'Umumiy'
+      if (!catMap[cat]) catMap[cat] = { name: cat, total: 0, completed: 0 }
+      catMap[cat].total++
+      if (l.progress === 100) catMap[cat].completed++
+    })
+    
+    exercises.forEach(e => {
+      const cat = e.category || 'Umumiy'
+      if (!catMap[cat]) catMap[cat] = { name: cat, total: 0, completed: 0 }
+      catMap[cat].total++
+      if (e.completed) catMap[cat].completed++
+    })
+    
+    const colors = ['bg-yellow-500', 'bg-cyan-500', 'bg-green-500', 'bg-blue-500', 'bg-orange-500', 'bg-purple-500', 'bg-red-500']
+    
+    return Object.values(catMap).map((cat, i) => ({
+      name: cat.name,
+      progress: cat.total > 0 ? Math.round((cat.completed / cat.total) * 100) : 0,
+      lessonsCount: cat.completed,
+      color: colors[i % colors.length]
+    })).sort((a, b) => b.progress - a.progress)
+  }, [lessons, exercises])
 
   // O'sish ko'rsatkichlari
-  const growthStats = [
-    { label: "O'qish vaqti", current: totalWeekHours.toFixed(1) + " soat", change: +15, icon: <Clock className="w-5 h-5" /> },
-    { label: "Tugallangan darslar", current: String(completedLessons), change: +8, icon: <BookOpen className="w-5 h-5" /> },
-    { label: "Mashq ballari", current: String(totalPoints), change: +22, icon: <Target className="w-5 h-5" /> },
-    { label: "Streak", current: currentStreak + " kun", change: 0, icon: <Flame className="w-5 h-5" /> },
-  ]
+  const growthStats = useMemo(() => [
+    { icon: <BookOpen className="w-5 h-5" />, current: completedLessons, label: "Tugallangan darslar" },
+    { icon: <Target className="w-5 h-5" />, current: completedExercises, label: "Bajarilgan mashqlar" },
+    { icon: <Clock className="w-5 h-5" />, current: `${totalStudyHours} soat`, label: "O'qish vaqti" },
+    { icon: <Trophy className="w-5 h-5" />, current: totalPoints, label: "Jami ball" }
+  ], [completedLessons, completedExercises, totalStudyHours, totalPoints])
+
+  // Kuchli va zaif tomonlar
+  const { strengths, weaknesses } = useMemo(() => {
+    const emojis = { JavaScript: '🟨', React: '⚛️', CSS: '🎨', Backend: '🔗', TypeScript: '🔷', Python: '🐍', Git: '🐙', Umumiy: '📚', Frontend: '⚛️', Tools: '🛠️' }
+    
+    const sorted = [...categoryStats]
+    const strong = sorted.filter(c => c.progress >= 50).slice(0, 3).map(c => ({
+      topic: c.name,
+      score: c.progress,
+      icon: emojis[c.name] || '📘'
+    }))
+    const weak = sorted.filter(c => c.progress < 50).sort((a, b) => a.progress - b.progress).slice(0, 3).map(c => ({
+      topic: c.name,
+      score: c.progress,
+      icon: emojis[c.name] || '📘'
+    }))
+    
+    return { strengths: strong, weaknesses: weak }
+  }, [categoryStats])
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -116,19 +242,9 @@ const Analytics = () => {
                 <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400">
                   {stat.icon}
                 </div>
-                {stat.change !== 0 && (
-                  <div className={`flex items-center gap-1 text-sm font-medium ${
-                    stat.change > 0 ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {stat.change > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                    {Math.abs(stat.change)}%
-                  </div>
-                )}
-                {stat.change === 0 && (
-                  <div className="flex items-center gap-1 text-sm text-slate-400">
-                    <Minus className="w-3 h-3" /> 0%
-                  </div>
-                )}
+                <div className="flex items-center gap-1 text-sm text-slate-400">
+                  <Minus className="w-3 h-3" /> -
+                </div>
               </div>
               <p className="text-2xl font-bold text-white">{stat.current}</p>
               <p className="text-slate-400 text-sm">{stat.label}</p>
@@ -246,6 +362,9 @@ const Analytics = () => {
           {/* Kategoriya bo'yicha progress */}
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
             <h2 className="text-lg font-bold text-white mb-6">Mavzu bo'yicha o'zlashtirish</h2>
+            {categoryStats.length === 0 ? (
+              <p className="text-slate-400 text-sm">Hali ma'lumot yo'q</p>
+            ) : (
             <div className="space-y-4">
               {categoryStats.map((cat, index) => (
                 <div key={index}>
@@ -259,10 +378,11 @@ const Analytics = () => {
                       style={{ width: `${cat.progress}%` }}
                     />
                   </div>
-                  <p className="text-slate-500 text-xs mt-1">{cat.lessonsCount} dars tugallangan</p>
+                  <p className="text-slate-500 text-xs mt-1">{cat.lessonsCount} tugallangan</p>
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {/* Kuchli va zaif tomonlar */}
@@ -273,17 +393,21 @@ const Analytics = () => {
                 <TrendingUp className="w-5 h-5 text-green-400" />
                 <h2 className="text-lg font-bold text-white">Kuchli tomonlar</h2>
               </div>
-              <div className="space-y-3">
-                {strengths.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/10 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{item.icon}</span>
-                      <span className="text-white font-medium text-sm">{item.topic}</span>
+              {strengths.length === 0 ? (
+                <p className="text-slate-400 text-sm">Hali ma'lumot yetarli emas</p>
+              ) : (
+                <div className="space-y-3">
+                  {strengths.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/10 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{item.icon}</span>
+                        <span className="text-white font-medium text-sm">{item.topic}</span>
+                      </div>
+                      <span className="text-green-400 font-bold">{item.score}%</span>
                     </div>
-                    <span className="text-green-400 font-bold">{item.score}%</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Zaif */}
@@ -292,17 +416,21 @@ const Analytics = () => {
                 <Target className="w-5 h-5 text-red-400" />
                 <h2 className="text-lg font-bold text-white">O'stirish kerak</h2>
               </div>
-              <div className="space-y-3">
-                {weaknesses.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{item.icon}</span>
-                      <span className="text-white font-medium text-sm">{item.topic}</span>
+              {weaknesses.length === 0 ? (
+                <p className="text-slate-400 text-sm">Hali ma'lumot yetarli emas</p>
+              ) : (
+                <div className="space-y-3">
+                  {weaknesses.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{item.icon}</span>
+                        <span className="text-white font-medium text-sm">{item.topic}</span>
+                      </div>
+                      <span className="text-red-400 font-bold">{item.score}%</span>
                     </div>
-                    <span className="text-red-400 font-bold">{item.score}%</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
