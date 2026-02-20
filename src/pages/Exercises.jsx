@@ -2,16 +2,19 @@ import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { Target, Plus, CheckCircle, Clock, Star, Trophy, Filter, Search, X, Upload, Calendar, Video, Tag, FileText, Trash2 } from 'lucide-react'
+import { Target, Plus, CheckCircle, Clock, Star, Trophy, Filter, Search, X, Upload, Calendar, Video, Tag, FileText, Trash2, Loader2 } from 'lucide-react'
 import { useState, useRef } from 'react'
+import { storage } from '../config/firebase'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const Exercises = () => {
-  const { userProfile } = useAuth()
+  const { userProfile, saveExerciseCompletion } = useAuth()
   const { collapsed } = useSidebar()
   const { exercises, toggleExercise, addExercise, totalPoints, completedExercises, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
   const [filter, setFilter] = useState('all')
   const [showModal, setShowModal] = useState(false)
+  const [uploadingFiles, setUploadingFiles] = useState(false)
   const fileInputRef = useRef(null)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [tagInput, setTagInput] = useState('')
@@ -19,15 +22,30 @@ const Exercises = () => {
     title: '', description: '', difficulty: 'Oson', points: 10, deadline: '', timeLimit: '', videoUrl: '', tags: []
   })
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files)
-    const newFiles = files.map(file => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      size: (file.size / 1024).toFixed(1) + ' KB',
-      type: file.type
-    }))
-    setUploadedFiles(prev => [...prev, ...newFiles])
+    if (files.length === 0) return
+    setUploadingFiles(true)
+    try {
+      const uploaded = await Promise.all(files.map(async (file) => {
+        const fileId = Date.now() + Math.random()
+        const storageRef = ref(storage, `exercises/${user?.uid || 'anon'}/${fileId}_${file.name}`)
+        await uploadBytes(storageRef, file)
+        const downloadURL = await getDownloadURL(storageRef)
+        return {
+          id: fileId,
+          name: file.name,
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          type: file.type,
+          url: downloadURL
+        }
+      }))
+      setUploadedFiles(prev => [...prev, ...uploaded])
+    } catch (err) {
+      console.error('File upload error:', err)
+    } finally {
+      setUploadingFiles(false)
+    }
   }
 
   const handleRemoveFile = (fileId) => { setUploadedFiles(prev => prev.filter(f => f.id !== fileId)) }
@@ -47,7 +65,7 @@ const Exercises = () => {
   const handleAddExercise = () => {
     if (!newExercise.title.trim() || !newExercise.description.trim()) return
     const exercise = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       title: newExercise.title,
       description: newExercise.description,
       difficulty: newExercise.difficulty,
@@ -72,6 +90,8 @@ const Exercises = () => {
     const ex = exercises.find(e => e.id === exerciseId)
     toggleExercise(exerciseId)
     if (ex && !ex.completed) {
+      // Firestore ga saqlash
+      saveExerciseCompletion(exerciseId, ex.points, ex.difficulty)
       addActivity({ title: "Mashq bajarildi: " + ex.title, type: 'success' })
       addNotification("Tabriklaymiz! \"" + ex.title + "\" mashqi bajarildi! +" + ex.points + " ball")
     }
@@ -167,9 +187,16 @@ const Exercises = () => {
               </div>
             </div>
           ))}
+          {filteredExercises.length === 0 && (
+            <div className="text-center py-12">
+              <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-1">Mashqlar topilmadi</h3>
+              <p className="text-slate-400 text-sm">
+                {filter === 'completed' ? 'Hali bajarilgan mashqlar yo\'q' : filter === 'pending' ? 'Barcha mashqlar bajarilgan!' : 'Mashqlar yo\'q'}
+              </p>
+            </div>
+          )}
         </div>
-
-        {/* Yangi mashq modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -214,7 +241,7 @@ const Exercises = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-slate-400 mb-2"><Tag className="w-4 h-4 inline mr-1" />Teglar</label>
-                  <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyPress={handleAddTag} placeholder="Teg yozing va Enter bosing" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                  <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleAddTag} placeholder="Teg yozing va Enter bosing" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
                   {newExercise.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {newExercise.tags.map((tag, index) => (

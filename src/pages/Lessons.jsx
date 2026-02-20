@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const Lessons = () => {
-  const { userProfile } = useAuth()
+  const { userProfile, saveLessonProgress } = useAuth()
   const { collapsed } = useSidebar()
   const { lessons, updateLessonProgress, addLesson, addActivity, addNotification } = useAppData()
   const navigate = useNavigate()
@@ -32,9 +32,11 @@ const Lessons = () => {
 
   const handleProgressUpdate = (lessonId, newProgress) => {
     updateLessonProgress(lessonId, newProgress)
+    // Firestore ga saqlash
+    saveLessonProgress(lessonId, newProgress)
     if (newProgress === 100) {
       addActivity({ title: "Dars tugallandi: " + selectedLesson.title, type: 'success' })
-      addNotification("Tabriklaymiz! \"" + selectedLesson.title + "\" darsi tugallandi! ���")
+      addNotification("Tabriklaymiz! \"" + selectedLesson.title + "\" darsi tugallandi! 🎉")
     }
     setSelectedLesson(prev => ({ ...prev, progress: newProgress }))
   }
@@ -42,7 +44,7 @@ const Lessons = () => {
   const handleAddLesson = () => {
     if (!newLesson.title.trim()) return
     const lesson = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       title: newLesson.title,
       description: newLesson.description,
       duration: newLesson.duration || '30 daqiqa',
