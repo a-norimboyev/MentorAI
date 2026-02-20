@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { useNavigate } from 'react-router-dom'
+import { createGroup, joinGroupByCode, deleteGroup as deleteGroupFromFirestore } from '../utils/groupService'
 import { 
   GraduationCap, 
   Plus, 
@@ -21,10 +22,10 @@ import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
 
 const Groups = () => {
-  const { userProfile } = useAuth()
+  const { user, userProfile } = useAuth()
   const { collapsed } = useSidebar()
   const navigate = useNavigate()
-  const { groups, addGroup, removeGroup, pendingRequests, addPendingRequest, addNotification, addActivity } = useAppData()
+  const { groups, addGroup, removeGroup, pendingRequests, addPendingRequest, addNotification, addActivity, loadGroups } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
 
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -38,10 +39,15 @@ const Groups = () => {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const handleDeleteGroup = (groupId) => {
+  const handleDeleteGroup = async (groupId) => {
     if (confirm('Guruhni o\'chirishni xohlaysizmi?')) {
-      removeGroup(groupId)
-      addActivity({ title: 'Guruh o\'chirildi', type: 'info' })
+      try {
+        await deleteGroupFromFirestore(groupId)
+        removeGroup(groupId)
+        addActivity({ title: 'Guruh o\'chirildi', type: 'info' })
+      } catch (error) {
+        console.error('Delete group error:', error)
+      }
     }
   }
 
@@ -215,7 +221,7 @@ const Groups = () => {
         </div>
 
         {/* Guruh yaratish modali (Ustoz) */}
-        {showCreateModal && <CreateGroupModal onClose={() => setShowCreateModal(false)} onCreated={(group) => {
+        {showCreateModal && <CreateGroupModal userId={user?.uid} userProfile={userProfile} onClose={() => setShowCreateModal(false)} onCreated={(group) => {
           addGroup(group)
           addNotification("Yangi guruh yaratildi: " + group.name)
           addActivity({ title: "Yangi guruh yaratildi: " + group.name, type: 'success' })
@@ -223,10 +229,10 @@ const Groups = () => {
         }} />}
 
         {/* Guruhga qo'shilish modali (Talaba) */}
-        {showJoinModal && <JoinGroupModal onClose={() => setShowJoinModal(false)} onRequested={(req) => {
+        {showJoinModal && <JoinGroupModal userId={user?.uid} onClose={() => setShowJoinModal(false)} onRequested={(req) => {
           addPendingRequest(req)
-          addNotification("Guruhga qo'shilish so'rovi yuborildi: " + req.groupName)
-          addActivity({ title: "Guruhga so'rov yuborildi: " + req.groupName, type: 'info' })
+          addNotification("Guruhga qo'shilish so'rovi yuborildi")
+          addActivity({ title: "Guruhga so'rov yuborildi", type: 'info' })
           setShowJoinModal(false)
         }} />}
       </main>
@@ -235,7 +241,7 @@ const Groups = () => {
 }
 
 // Guruh yaratish modali
-const CreateGroupModal = ({ onClose, onCreated }) => {
+const CreateGroupModal = ({ onClose, onCreated, userId, userProfile }) => {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -243,7 +249,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
     maxStudents: 30
   })
 
-  const generateGroupId = () => {
+  const generateGroupCode = () => {
     const prefix = formData.subject.substring(0, 3).toUpperCase() || 'GRP'
     const random = Math.random().toString(36).substring(2, 6).toUpperCase()
     return `${prefix}-${random}`
@@ -253,21 +259,28 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
     e.preventDefault()
     setLoading(true)
     
-    // Demo uchun
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const newGroup = {
-      id: generateGroupId(),
-      name: formData.name,
-      subject: formData.subject,
-      teacherName: 'Siz',
-      maxStudents: parseInt(formData.maxStudents),
-      currentStudents: 0,
-      createdAt: new Date().toISOString()
+    try {
+      const code = generateGroupCode()
+      const groupData = {
+        name: formData.name,
+        subject: formData.subject,
+        code,
+        teacherName: userProfile?.name || 'Ustoz',
+        maxStudents: parseInt(formData.maxStudents),
+        currentStudents: 1
+      }
+      const groupId = await createGroup(userId, groupData)
+      
+      onCreated({
+        id: groupId,
+        ...groupData,
+        createdAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Create group error:', error)
+    } finally {
+      setLoading(false)
     }
-    
-    onCreated(newGroup)
-    setLoading(false)
   }
 
   return (
@@ -338,7 +351,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
 }
 
 // Guruhga qo'shilish modali
-const JoinGroupModal = ({ onClose, onRequested }) => {
+const JoinGroupModal = ({ onClose, onRequested, userId }) => {
   const [loading, setLoading] = useState(false)
   const [groupCode, setGroupCode] = useState('')
   const [error, setError] = useState('')
@@ -348,22 +361,27 @@ const JoinGroupModal = ({ onClose, onRequested }) => {
     setError('')
     setLoading(true)
     
-    // Demo uchun
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Kodni tekshirish (demo)
-    if (groupCode.length < 4) {
-      setError('Noto\'g\'ri guruh kodi')
+    try {
+      if (groupCode.length < 4) {
+        setError('Noto\'g\'ri guruh kodi')
+        setLoading(false)
+        return
+      }
+      
+      const groupId = await joinGroupByCode(userId, groupCode.toUpperCase())
+      if (groupId) {
+        onRequested({
+          groupId,
+          groupCode: groupCode.toUpperCase(),
+          status: 'pending'
+        })
+      }
+    } catch (error) {
+      setError('Xatolik yuz berdi')
+      console.error('Join group error:', error)
+    } finally {
       setLoading(false)
-      return
     }
-    
-    onRequested({
-      groupId: groupCode.toUpperCase(),
-      groupName: `Guruh ${groupCode.toUpperCase()}`,
-      status: 'pending'
-    })
-    setLoading(false)
   }
 
   return (

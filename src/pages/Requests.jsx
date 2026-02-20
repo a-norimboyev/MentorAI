@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { useAppData } from '../context/AppDataContext'
 import { 
   Check, 
   X, 
@@ -8,75 +10,100 @@ import {
   Users,
   Mail,
   Filter,
-  Search
+  Search,
+  Loader2
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
+import { getPendingRequests, approveStudentRequest, rejectStudentRequest } from '../utils/groupService'
+import { db } from '../config/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 const Requests = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { groups, addNotification, addActivity } = useAppData()
   const { collapsed } = useSidebar()
-  const [filter, setFilter] = useState('pending') // pending, approved, rejected
+  const [filter, setFilter] = useState('pending')
+  const [requests, setRequests] = useState([])
+  const [loadingRequests, setLoadingRequests] = useState(true)
 
-  // Demo so'rovlar
-  const [requests, setRequests] = useState([
-    {
-      id: '1',
-      studentName: 'Ali Valiyev',
-      studentEmail: 'ali@example.com',
-      groupId: 'JS-2024',
-      groupName: 'JavaScript Boshlangich',
-      status: 'pending',
-      createdAt: '2024-02-10T10:30:00'
-    },
-    {
-      id: '2',
-      studentName: 'Nilufar Karimova',
-      studentEmail: 'nilufar@example.com',
-      groupId: 'JS-2024',
-      groupName: 'JavaScript Boshlangich',
-      status: 'pending',
-      createdAt: '2024-02-10T09:15:00'
-    },
-    {
-      id: '3',
-      studentName: 'Bobur Toshmatov',
-      studentEmail: 'bobur@example.com',
-      groupId: 'PY-2024',
-      groupName: 'Python Advanced',
-      status: 'pending',
-      createdAt: '2024-02-09T16:45:00'
-    },
-    {
-      id: '4',
-      studentName: 'Madina Rahimova',
-      studentEmail: 'madina@example.com',
-      groupId: 'REACT-01',
-      groupName: 'React.js Kursi',
-      status: 'approved',
-      createdAt: '2024-02-08T14:20:00'
-    },
-    {
-      id: '5',
-      studentName: 'Jasur Aliyev',
-      studentEmail: 'jasur@example.com',
-      groupId: 'JS-2024',
-      groupName: 'JavaScript Boshlangich',
-      status: 'rejected',
-      createdAt: '2024-02-07T11:00:00'
+  // Firestore dan so'rovlarni yuklash
+  useEffect(() => {
+    const loadRequests = async () => {
+      if (!user || groups.length === 0) {
+        setLoadingRequests(false)
+        return
+      }
+      
+      setLoadingRequests(true)
+      try {
+        const allRequests = []
+        for (const group of groups) {
+          const pending = await getPendingRequests(group.id)
+          for (const req of pending) {
+            // Get student info
+            let studentName = 'Noma\'lum'
+            let studentEmail = ''
+            try {
+              const studentDoc = await getDoc(doc(db, 'users', req.studentId))
+              if (studentDoc.exists()) {
+                studentName = studentDoc.data().name || 'Noma\'lum'
+                studentEmail = studentDoc.data().email || ''
+              }
+            } catch (e) {
+              console.error('Error loading student:', e)
+            }
+            allRequests.push({
+              id: req.id,
+              studentId: req.studentId,
+              studentName,
+              studentEmail,
+              groupId: group.id,
+              groupName: group.name,
+              status: req.status || 'pending',
+              createdAt: req.createdAt?.toDate?.() ? req.createdAt.toDate().toISOString() : new Date().toISOString()
+            })
+          }
+        }
+        setRequests(allRequests)
+      } catch (error) {
+        console.error('Error loading requests:', error)
+      } finally {
+        setLoadingRequests(false)
+      }
     }
-  ])
 
-  const handleApprove = (requestId) => {
-    setRequests(requests.map(req => 
-      req.id === requestId ? { ...req, status: 'approved' } : req
-    ))
+    loadRequests()
+  }, [user, groups])
+
+  const handleApprove = async (requestId) => {
+    const req = requests.find(r => r.id === requestId)
+    if (!req) return
+    try {
+      await approveStudentRequest(req.groupId, requestId, req.studentId)
+      setRequests(requests.map(r => 
+        r.id === requestId ? { ...r, status: 'approved' } : r
+      ))
+      addNotification(req.studentName + ' ' + req.groupName + ' guruhiga qo\'shildi')
+      addActivity({ title: req.studentName + ' tasdiqlandi', type: 'success' })
+    } catch (error) {
+      console.error('Approve error:', error)
+    }
   }
 
-  const handleReject = (requestId) => {
-    setRequests(requests.map(req => 
-      req.id === requestId ? { ...req, status: 'rejected' } : req
-    ))
+  const handleReject = async (requestId) => {
+    const req = requests.find(r => r.id === requestId)
+    if (!req) return
+    try {
+      await rejectStudentRequest(req.groupId, requestId)
+      setRequests(requests.map(r => 
+        r.id === requestId ? { ...r, status: 'rejected' } : r
+      ))
+      addActivity({ title: req.studentName + ' rad etildi', type: 'info' })
+    } catch (error) {
+      console.error('Reject error:', error)
+    }
   }
 
   const filteredRequests = requests.filter(req => {
@@ -171,6 +198,12 @@ const Requests = () => {
           </div>
 
           {/* Requests list */}
+          {loadingRequests ? (
+            <div className="text-center py-16">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
+              <p className="text-slate-400">So'rovlar yuklanmoqda...</p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {filteredRequests.map((request) => (
               <div 
@@ -234,8 +267,9 @@ const Requests = () => {
               </div>
             ))}
           </div>
+          )}
 
-          {filteredRequests.length === 0 && (
+          {filteredRequests.length === 0 && !loadingRequests && (
             <div className="text-center py-16">
               <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">So'rovlar yo'q</h3>

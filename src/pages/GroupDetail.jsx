@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
+import { getGroupDetails, removeStudentFromGroup } from '../utils/groupService'
+import { db } from '../config/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 import { 
   ArrowLeft,
   Users, 
@@ -15,7 +18,8 @@ import {
   Calendar,
   Trophy,
   BarChart3,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
@@ -23,56 +27,123 @@ import { useSidebar } from '../context/SidebarContext'
 const GroupDetail = () => {
   const { groupId } = useParams()
   const navigate = useNavigate()
-  const { userProfile } = useAuth()
+  const { user, userProfile } = useAuth()
   const { collapsed } = useSidebar()
-  const { groups, addActivity, addNotification } = useAppData()
+  const { groups, removeGroup, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'
   const [copiedId, setCopiedId] = useState(false)
+  const [loadingGroup, setLoadingGroup] = useState(true)
+  const [students, setStudents] = useState([])
 
   // Guruhni umumiy ma'lumotlardan topish
   const groupFromContext = groups.find(g => g.id === groupId)
-  
-  const [group] = useState(groupFromContext || {
-    id: groupId,
-    name: 'JavaScript Boshlangich',
-    subject: 'JavaScript',
-    teacherName: 'Aziz Karimov',
-    maxStudents: 30,
-    currentStudents: 24,
-    createdAt: '2024-01-15',
-    description: 'Bu kursda JavaScript dasturlash tilining asoslari o\'rgatiladi.'
-  })
+  const [group, setGroup] = useState(groupFromContext || null)
 
-  // Demo o'quvchilar ro'yxati
-  const [students, setStudents] = useState([
-    { id: '1', name: 'Ali Valiyev', email: 'ali@example.com', progress: 85, joinedAt: '2024-01-16' },
-    { id: '2', name: 'Nilufar Karimova', email: 'nilufar@example.com', progress: 72, joinedAt: '2024-01-17' },
-    { id: '3', name: 'Bobur Toshmatov', email: 'bobur@example.com', progress: 90, joinedAt: '2024-01-18' },
-    { id: '4', name: 'Madina Rahimova', email: 'madina@example.com', progress: 65, joinedAt: '2024-01-20' },
-    { id: '5', name: 'Jasur Aliyev', email: 'jasur@example.com', progress: 45, joinedAt: '2024-01-22' },
-    { id: '6', name: 'Dilnoza Usmonova', email: 'dilnoza@example.com', progress: 78, joinedAt: '2024-01-25' },
-  ])
+  // Guruh va a'zolarini Firestore dan yuklash
+  useEffect(() => {
+    const loadGroupData = async () => {
+      setLoadingGroup(true)
+      try {
+        // Guruh ma'lumotlarini yuklash
+        let groupData = groupFromContext
+        if (!groupData) {
+          groupData = await getGroupDetails(groupId)
+          setGroup(groupData)
+        }
+
+        // A'zolarni yuklash
+        const members = groupData?.members || []
+        const studentList = []
+        for (const memberId of members) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', memberId))
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+              studentList.push({
+                id: memberId,
+                name: userData.name || 'Noma\'lum',
+                email: userData.email || '',
+                progress: 0,
+                joinedAt: userData.createdAt || new Date().toISOString()
+              })
+            }
+          } catch (e) {
+            console.error('Error loading member:', e)
+          }
+        }
+        setStudents(studentList)
+      } catch (error) {
+        console.error('Error loading group:', error)
+      } finally {
+        setLoadingGroup(false)
+      }
+    }
+
+    loadGroupData()
+  }, [groupId])
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(group.id)
+    navigator.clipboard.writeText(group?.code || group?.id)
     setCopiedId(true)
     setTimeout(() => setCopiedId(false), 2000)
   }
 
-  const handleRemoveStudent = (studentId) => {
+  const handleRemoveStudent = async (studentId) => {
     if (confirm('O\'quvchini guruhdan chiqarishni xohlaysizmi?')) {
-      const student = students.find(s => s.id === studentId)
-      setStudents(students.filter(s => s.id !== studentId))
-      addActivity({ title: (student?.name || 'O\'quvchi') + ' guruhdan chiqarildi', type: 'info' })
-      addNotification((student?.name || 'O\'quvchi') + ' ' + group.name + ' guruhidan chiqarildi')
+      try {
+        const student = students.find(s => s.id === studentId)
+        await removeStudentFromGroup(groupId, studentId)
+        setStudents(students.filter(s => s.id !== studentId))
+        addActivity({ title: (student?.name || 'O\'quvchi') + ' guruhdan chiqarildi', type: 'info' })
+        addNotification((student?.name || 'O\'quvchi') + ' ' + (group?.name || 'guruh') + 'dan chiqarildi')
+      } catch (error) {
+        console.error('Remove student error:', error)
+      }
     }
   }
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (confirm('Guruhdan chiqishni xohlaysizmi?')) {
-      addActivity({ title: group.name + ' guruhidan chiqildi', type: 'info' })
-      navigate('/groups')
+      try {
+        await removeStudentFromGroup(groupId, user?.uid)
+        removeGroup(groupId)
+        addActivity({ title: (group?.name || 'Guruh') + 'dan chiqildi', type: 'info' })
+        navigate('/groups')
+      } catch (error) {
+        console.error('Leave group error:', error)
+        navigate('/groups')
+      }
     }
+  }
+
+  if (loadingGroup) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <Sidebar />
+        <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} p-8 transition-all duration-300`}>
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (!group) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <Sidebar />
+        <main className={`${collapsed ? 'ml-21.25' : 'ml-64'} p-8 transition-all duration-300`}>
+          <div className="text-center py-16">
+            <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Guruh topilmadi</h3>
+            <button onClick={() => navigate('/groups')} className="mt-4 text-blue-400 hover:text-blue-300">
+              ← Guruhlar
+            </button>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   const getProgressColor = (progress) => {
@@ -121,7 +192,7 @@ const GroupDetail = () => {
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
               <p className="text-slate-400 text-sm mb-1">Guruh kodi</p>
               <div className="flex items-center justify-between">
-                <span className="text-xl font-mono font-bold text-white">{group.id}</span>
+                <span className="text-xl font-mono font-bold text-white">{group.code || group.id}</span>
                 <button
                   onClick={copyToClipboard}
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
@@ -148,7 +219,7 @@ const GroupDetail = () => {
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-green-500" />
                 <span className="text-xl font-bold text-white">
-                  {Math.round(students.reduce((acc, s) => acc + s.progress, 0) / students.length)}%
+                  {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + s.progress, 0) / students.length) : 0}%
                 </span>
               </div>
             </div>
