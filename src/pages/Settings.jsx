@@ -7,6 +7,7 @@ import { User, Bell, Shield, Globe, Palette, LogOut, Camera, Save, Moon, Sun, Ma
 import { useState, useRef } from 'react'
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { auth, storage } from '../config/firebase'
+import { resetChat } from '../config/gemini'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -23,13 +24,14 @@ const Settings = () => {
     fullName: userProfile?.fullName || userProfile?.name || '',
     email: user?.email || '',
     phone: userProfile?.phone || '',
-    bio: userProfile?.bio || ''
+    bio: userProfile?.bio || '',
+    specialty: isTeacher ? (userProfile?.subject || '') : (userProfile?.field || '')
   })
   const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    newStudent: true,
-    lessonReminder: true
+    email: userProfile?.notificationSettings?.email ?? true,
+    push: userProfile?.notificationSettings?.push ?? true,
+    newStudent: userProfile?.notificationSettings?.newStudent ?? true,
+    lessonReminder: userProfile?.notificationSettings?.lessonReminder ?? true
   })
 
   const tabs = [
@@ -41,6 +43,7 @@ const Settings = () => {
 
   const handleLogout = async () => {
     try {
+      resetChat()
       await signOut(auth)
       navigate('/')
     } catch (error) {
@@ -51,8 +54,61 @@ const Settings = () => {
   const [saveStatus, setSaveStatus] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [passwordData, setPasswordData] = useState({ current: '', newPass: '', confirm: '' })
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState(userProfile?.language || 'uz')
+  const [accentColor, setAccentColor] = useState(userProfile?.accentColor || 0)
   const fileInputRef = useRef(null)
   const { addActivity, addNotification } = useAppData()
+
+  // Bildirishnoma sozlamalarini o'zgartirish va Firestore ga saqlash
+  const toggleNotificationSetting = (key) => {
+    setNotifications(prev => {
+      const updated = { ...prev, [key]: !prev[key] }
+      // Firestore ga saqlash
+      if (updateUserProfile) {
+        updateUserProfile({ notificationSettings: updated }).catch(e => 
+          console.error('Error saving notification settings:', e)
+        )
+      }
+      return updated
+    })
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordData.current || !passwordData.newPass || !passwordData.confirm) {
+      toast.error('Barcha maydonlarni to\'ldiring')
+      return
+    }
+    if (passwordData.newPass.length < 8) {
+      toast.error('Yangi parol kamida 8 belgidan iborat bo\'lishi kerak')
+      return
+    }
+    if (passwordData.newPass !== passwordData.confirm) {
+      toast.error('Yangi parollar mos kelmaydi')
+      return
+    }
+    setChangingPassword(true)
+    try {
+      const credential = EmailAuthProvider.credential(user.email, passwordData.current)
+      await reauthenticateWithCredential(auth.currentUser, credential)
+      await updatePassword(auth.currentUser, passwordData.newPass)
+      toast.success('Parol muvaffaqiyatli o\'zgartirildi')
+      setPasswordData({ current: '', newPass: '', confirm: '' })
+      addActivity({ title: 'Parol o\'zgartirildi', type: 'success' })
+    } catch (error) {
+      console.error('Password change error:', error)
+      if (error.code === 'auth/wrong-password') {
+        toast.error('Joriy parol noto\'g\'ri')
+      } else if (error.code === 'auth/requires-recent-login') {
+        toast.error('Qayta login qiling va urinib ko\'ring')
+      } else {
+        toast.error('Parol o\'zgartirishda xatolik')
+      }
+    } finally {
+      setChangingPassword(false)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -62,7 +118,8 @@ const Settings = () => {
           fullName: formData.fullName,
           name: formData.fullName,
           phone: formData.phone,
-          bio: formData.bio
+          bio: formData.bio,
+          ...(isTeacher ? { subject: formData.specialty } : { field: formData.specialty })
         })
       }
       setSaveStatus('success')
@@ -232,7 +289,8 @@ const Settings = () => {
                     <label className="block text-sm text-slate-400 mb-2">Mutaxassislik</label>
                     <input
                       type="text"
-                      defaultValue={isTeacher ? userProfile?.subject : userProfile?.field || ''}
+                      value={formData.specialty}
+                      onChange={(e) => setFormData({...formData, specialty: e.target.value})}
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
@@ -279,7 +337,7 @@ const Settings = () => {
                       <p className="text-sm text-slate-400">Yangi xabarlar haqida email orqali xabar berish</p>
                     </div>
                     <button
-                      onClick={() => setNotifications({...notifications, email: !notifications.email})}
+                      onClick={() => toggleNotificationSetting('email')}
                       className={`w-12 h-6 rounded-full transition ${
                         notifications.email ? 'bg-blue-600' : 'bg-slate-600'
                       }`}
@@ -296,7 +354,7 @@ const Settings = () => {
                       <p className="text-sm text-slate-400">Brauzer orqali tezkor xabarnomalar</p>
                     </div>
                     <button
-                      onClick={() => setNotifications({...notifications, push: !notifications.push})}
+                      onClick={() => toggleNotificationSetting('push')}
                       className={`w-12 h-6 rounded-full transition ${
                         notifications.push ? 'bg-blue-600' : 'bg-slate-600'
                       }`}
@@ -314,7 +372,7 @@ const Settings = () => {
                         <p className="text-sm text-slate-400">Guruhga qo'shilish so'rovlari haqida xabar</p>
                       </div>
                       <button
-                        onClick={() => setNotifications({...notifications, newStudent: !notifications.newStudent})}
+                      onClick={() => toggleNotificationSetting('newStudent')}
                         className={`w-12 h-6 rounded-full transition ${
                           notifications.newStudent ? 'bg-blue-600' : 'bg-slate-600'
                         }`}
@@ -332,7 +390,7 @@ const Settings = () => {
                       <p className="text-sm text-slate-400">Darslar boshlanishidan oldin eslatma</p>
                     </div>
                     <button
-                      onClick={() => setNotifications({...notifications, lessonReminder: !notifications.lessonReminder})}
+                      onClick={() => toggleNotificationSetting('lessonReminder')}
                       className={`w-12 h-6 rounded-full transition ${
                         notifications.lessonReminder ? 'bg-blue-600' : 'bg-slate-600'
                       }`}
@@ -359,6 +417,8 @@ const Settings = () => {
                         <label className="block text-sm text-slate-400 mb-2">Joriy parol</label>
                         <input
                           type="password"
+                          value={passwordData.current}
+                          onChange={(e) => setPasswordData({...passwordData, current: e.target.value})}
                           placeholder="••••••••"
                           className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                         />
@@ -367,6 +427,8 @@ const Settings = () => {
                         <label className="block text-sm text-slate-400 mb-2">Yangi parol</label>
                         <input
                           type="password"
+                          value={passwordData.newPass}
+                          onChange={(e) => setPasswordData({...passwordData, newPass: e.target.value})}
                           placeholder="••••••••"
                           className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                         />
@@ -375,12 +437,19 @@ const Settings = () => {
                         <label className="block text-sm text-slate-400 mb-2">Yangi parolni tasdiqlash</label>
                         <input
                           type="password"
+                          value={passwordData.confirm}
+                          onChange={(e) => setPasswordData({...passwordData, confirm: e.target.value})}
                           placeholder="••••••••"
                           className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
-                        Parolni yangilash
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={changingPassword}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition"
+                      >
+                        {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        {changingPassword ? 'O\'zgartirilmoqda...' : 'Parolni yangilash'}
                       </button>
                     </div>
                   </div>
@@ -438,7 +507,16 @@ const Settings = () => {
 
                   <div>
                     <h3 className="font-medium text-white mb-4">Til</h3>
-                    <select className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                    <select 
+                      value={selectedLanguage}
+                      onChange={(e) => {
+                        setSelectedLanguage(e.target.value)
+                        if (updateUserProfile) {
+                          updateUserProfile({ language: e.target.value }).catch(err => console.error('Language save error:', err))
+                        }
+                      }}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    >
                       <option value="uz">O'zbekcha</option>
                       <option value="ru">Русский</option>
                       <option value="en">English</option>
@@ -451,7 +529,13 @@ const Settings = () => {
                       {['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-red-500'].map((color, idx) => (
                         <button
                           key={idx}
-                          className={`w-10 h-10 rounded-full ${color} ${idx === 0 ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800' : ''}`}
+                          onClick={() => {
+                            setAccentColor(idx)
+                            if (updateUserProfile) {
+                              updateUserProfile({ accentColor: idx }).catch(err => console.error('Accent save error:', err))
+                            }
+                          }}
+                          className={`w-10 h-10 rounded-full ${color} ${idx === accentColor ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800' : ''}`}
                         />
                       ))}
                     </div>

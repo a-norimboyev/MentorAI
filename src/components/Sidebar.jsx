@@ -18,7 +18,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   ClipboardCheck,
-  TrendingUp
+  TrendingUp,
+  Search
 } from 'lucide-react'
 
 const Sidebar = () => {
@@ -39,6 +40,7 @@ const Sidebar = () => {
     if (isTeacher) {
       return [
         { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+        { icon: <Search className="w-5 h-5" />, label: "Qidiruv", path: "/search" },
         { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
         { icon: <Users className="w-5 h-5" />, label: "So'rovlar", path: "/requests" },
         { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
@@ -50,6 +52,7 @@ const Sidebar = () => {
     if (isSelfLearner) {
       return [
         { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+        { icon: <Search className="w-5 h-5" />, label: "Qidiruv", path: "/search" },
         { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
         { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },
         { icon: <ClipboardCheck className="w-5 h-5" />, label: "Testlar", path: "/quizzes" },
@@ -61,6 +64,7 @@ const Sidebar = () => {
     }
     return [
       { icon: <BarChart3 className="w-5 h-5" />, label: "Dashboard", path: "/dashboard" },
+      { icon: <Search className="w-5 h-5" />, label: "Qidiruv", path: "/search" },
       { icon: <FolderOpen className="w-5 h-5" />, label: "Guruhlar", path: "/groups" },
       { icon: <BookOpen className="w-5 h-5" />, label: "Darslar", path: "/lessons" },
       { icon: <Target className="w-5 h-5" />, label: "Mashqlar", path: "/exercises" },

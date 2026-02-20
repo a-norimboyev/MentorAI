@@ -230,7 +230,7 @@ const Onboarding = () => {
     if (!answers.hours) errors.push('Kunlik soatlarni tanlang')
     if (!answers.english) errors.push('English darajasini tanlang')
     if (!answers.experience) errors.push('Tajribani tanlang')
-    if (!answers.tech || answers.tech.length === 0) errors.push('Texnologiyani tanlang')
+    if (!shouldSkipTech && (!answers.tech || answers.tech.length === 0)) errors.push('Texnologiyani tanlang')
     return errors
   }
 

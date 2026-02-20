@@ -177,6 +177,11 @@ const Dashboard = () => {
                       )}
                     </div>
                     <div className="max-h-72 overflow-y-auto">
+                      {notifications.length === 0 && (
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">
+                          Bildirishnomalar yo'q
+                        </div>
+                      )}
                       {notifications.map((notif) => (
                         <div
                           key={notif.id}

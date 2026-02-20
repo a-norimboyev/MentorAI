@@ -74,21 +74,27 @@ export const searchGroups = async (userId, searchTerm) => {
   }
 }
 
-// Search users
+// Search users — faqat xavfsiz ma'lumotlarni qaytarish
 export const searchUsers = async (searchTerm) => {
   try {
     const usersRef = collection(db, 'users')
     const querySnapshot = await getDocs(usersRef)
     
     const results = querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        type: 'user',
-        ...doc.data()
-      }))
+      .map(doc => {
+        const data = doc.data()
+        // Faqat xavfsiz maydonlarni qaytarish — email va shaxsiy ma'lumotlarni chiqarmaslik
+        return {
+          id: doc.id,
+          type: 'user',
+          name: data.name || 'Foydalanuvchi',
+          userType: data.userType || 'student',
+          photoURL: data.photoURL || null,
+          field: data.field || null
+        }
+      })
       .filter(user =>
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     
     return results

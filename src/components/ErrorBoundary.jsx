@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component {
             <p className="text-slate-400 mb-4">
               {this.state.error?.message || 'Noma\'lum xatolik'}
             </p>
-            {process.env.NODE_ENV === 'development' && (
+            {import.meta.env.DEV && (
               <details className="text-left mb-4 text-xs text-slate-500 bg-slate-900/50 p-3 rounded">
                 <summary className="cursor-pointer font-mono mb-2">Developer details</summary>
                 <pre className="whitespace-pre-wrap">{this.state.errorInfo?.componentStack}</pre>

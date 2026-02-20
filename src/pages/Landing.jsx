@@ -47,10 +47,10 @@ const Landing = () => {
   ]
 
   const stats = [
-    { value: "5", label: "Faol O'quvchilar" },
-    { value: "500+", label: "Mashqlar" },
-    { value: "50+", label: "Ustozlar" },
-    { value: "98%", label: "Mamnunlik" }
+    { value: "🎓", label: "AI asosida o'qitish" },
+    { value: "📚", label: "500+ mashqlar bazasi" },
+    { value: "🤖", label: "Shaxsiy AI ustoz" },
+    { value: "🌍", label: "O'zbek tilida" }
   ]
 
   const testimonials = [
