@@ -1,7 +1,22 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { db } from '../config/firebase'
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
+import { 
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+  addDoc,
+  orderBy,
+  limit,
+  serverTimestamp
+} from 'firebase/firestore'
+import { getUserGroups } from '../utils/groupService'
 
 const AppDataContext = createContext(null)
 
@@ -14,26 +29,34 @@ export const useAppData = () => {
 }
 
 export const AppDataProvider = ({ children }) => {
-  const { user } = useAuth()
+  const { user, saveActivity } = useAuth()
   
   // =================== REAL-TIME LISTENERS SETUP ===================
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setNotifications([])
+      return
+    }
 
     // Notifications real-time listener
     try {
       const notifQuery = query(
         collection(db, 'users', user.uid, 'notifications'),
-        where('read', '==', false)
+        orderBy('createdAt', 'desc'),
+        limit(20)
       )
       const unsubscribeNotif = onSnapshot(notifQuery, (snapshot) => {
-        const notifs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          text: doc.data().text,
-          time: doc.data().createdAt?.toDate() || new Date(),
-          read: doc.data().read
-        }))
-        setNotifications(prev => [...notifs, ...prev.filter(n => n.read)].slice(0, 20))
+        const notifs = snapshot.docs.map(docSnap => {
+          const data = docSnap.data()
+          const createdAt = data.createdAt?.toDate() || new Date()
+          return {
+            id: docSnap.id,
+            text: data.text,
+            time: createdAt.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
+            read: data.read
+          }
+        })
+        setNotifications(notifs)
       })
       return () => unsubscribeNotif()
     } catch (error) {
@@ -41,84 +64,36 @@ export const AppDataProvider = ({ children }) => {
     }
   }, [user])
 
-  // =================== LOAD PROGRESS FROM FIRESTORE ===================
-  useEffect(() => {
+  // =================== GURUHLAR ===================
+  const [groups, setGroups] = useState([])
+
+  const [pendingRequests, setPendingRequests] = useState([])
+
+  // Firestore dan guruhlarni yuklash
+  const loadGroups = useCallback(async () => {
     if (!user) return
-
-    const loadProgressFromFirestore = async () => {
-      try {
-        // Load lesson progress
-        const lessonProgRef = collection(db, 'users', user.uid, 'lessonProgress')
-        const lessonProgSnap = await getDocs(lessonProgRef)
-        const lessonProgress = {}
-        lessonProgSnap.forEach(doc => {
-          lessonProgress[doc.id] = doc.data().progress || 0
-        })
-
-        // Update lessons with saved progress
-        setLessons(prev => prev.map(lesson => ({
-          ...lesson,
-          progress: lessonProgress[lesson.id] || lesson.progress
-        })))
-
-        // Load exercise completion
-        const exerciseCompRef = collection(db, 'users', user.uid, 'exerciseCompletion')
-        const exerciseCompSnap = await getDocs(exerciseCompRef)
-        const completedExerciseIds = new Set()
-        let totalPoints = 0
-        
-        exerciseCompSnap.forEach(doc => {
-          completedExerciseIds.add(doc.id)
-          totalPoints += doc.data().points || 0
-        })
-
-        // Update exercises with saved completion status
-        setExercises(prev => prev.map(exercise => ({
-          ...exercise,
-          completed: completedExerciseIds.has(String(exercise.id))
-        })))
-      } catch (error) {
-        console.error('Error loading progress from Firestore:', error)
-      }
+    try {
+      const userGroups = await getUserGroups(user.uid)
+      const formattedGroups = userGroups.map(g => ({
+        ...g,
+        currentStudents: g.members?.length || 0,
+        createdAt: g.createdAt?.toDate?.() ? g.createdAt.toDate().toISOString() : g.createdAt || new Date().toISOString()
+      }))
+      setGroups(formattedGroups)
+    } catch (error) {
+      console.error('Error loading groups from Firestore:', error)
     }
-
-    loadProgressFromFirestore()
   }, [user])
 
-  // =================== GURUHLAR ===================
-  const [groups, setGroups] = useState([
-    {
-      id: 'JS-2024',
-      name: 'JavaScript Boshlangich',
-      subject: 'JavaScript',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 30,
-      currentStudents: 24,
-      createdAt: '2024-01-15'
-    },
-    {
-      id: 'PY-2024',
-      name: 'Python Advanced',
-      subject: 'Python',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 25,
-      currentStudents: 18,
-      createdAt: '2024-02-01'
-    },
-    {
-      id: 'REACT-01',
-      name: 'React.js Kursi',
-      subject: 'React',
-      teacherName: 'Aziz Karimov',
-      maxStudents: 20,
-      currentStudents: 20,
-      createdAt: '2024-02-10'
+  // User login bo'lganda guruhlarni yuklash
+  useEffect(() => {
+    if (user) {
+      loadGroups()
+    } else {
+      setGroups([])
+      setPendingRequests([])
     }
-  ])
-
-  const [pendingRequests, setPendingRequests] = useState([
-    { groupId: 'NODE-01', groupName: 'Node.js Backend', status: 'pending' }
-  ])
+  }, [user, loadGroups])
 
   const addGroup = useCallback((group) => {
     setGroups(prev => [...prev, group])
@@ -133,58 +108,7 @@ export const AppDataProvider = ({ children }) => {
   }, [])
 
   // =================== DARSLAR ===================
-  const [lessons, setLessons] = useState([
-    {
-      id: 1,
-      title: "JavaScript asoslari",
-      description: "O'zgaruvchilar, funksiyalar va massivlar bilan ishlash",
-      duration: "45 daqiqa",
-      students: 24,
-      progress: 100,
-      thumbnail: "🟨",
-      category: "Dasturlash"
-    },
-    {
-      id: 2,
-      title: "React Hooks",
-      description: "useState, useEffect va boshqa hooklar",
-      duration: "60 daqiqa",
-      students: 18,
-      progress: 75,
-      thumbnail: "⚛️",
-      category: "Frontend"
-    },
-    {
-      id: 3,
-      title: "Node.js kirish",
-      description: "Server tomonlama JavaScript",
-      duration: "55 daqiqa",
-      students: 32,
-      progress: 50,
-      thumbnail: "🟢",
-      category: "Backend"
-    },
-    {
-      id: 4,
-      title: "TypeScript asoslari",
-      description: "Tiplar va interfacelar",
-      duration: "40 daqiqa",
-      students: 15,
-      progress: 25,
-      thumbnail: "🔷",
-      category: "Dasturlash"
-    },
-    {
-      id: 5,
-      title: "Git va GitHub",
-      description: "Version control tizimi",
-      duration: "35 daqiqa",
-      students: 28,
-      progress: 0,
-      thumbnail: "🐙",
-      category: "Tools"
-    }
-  ])
+  const [lessons, setLessons] = useState([])
 
   const updateLessonProgress = useCallback((lessonId, progress) => {
     setLessons(prev => prev.map(l => l.id === lessonId ? { ...l, progress } : l))
@@ -192,65 +116,15 @@ export const AppDataProvider = ({ children }) => {
 
   const addLesson = useCallback((lesson) => {
     setLessons(prev => [lesson, ...prev])
-  }, [])
+    // Firestore ga saqlash
+    if (user) {
+      const lessonRef = doc(db, 'users', user.uid, 'lessons', String(lesson.id))
+      setDoc(lessonRef, lesson).catch(e => console.error('Error saving lesson:', e))
+    }
+  }, [user])
 
   // =================== MASHQLAR ===================
-  const [exercises, setExercises] = useState([
-    {
-      id: 1,
-      title: "JavaScript Array Methods",
-      description: "map, filter, reduce metodlarini qo'llash",
-      difficulty: "Oson",
-      points: 10,
-      completed: true,
-      category: "JavaScript"
-    },
-    {
-      id: 2,
-      title: "React State Management",
-      description: "useState va useReducer bilan ishlash",
-      difficulty: "O'rta",
-      points: 20,
-      completed: true,
-      category: "React"
-    },
-    {
-      id: 3,
-      title: "API Integration",
-      description: "fetch va axios bilan API so'rovlar",
-      difficulty: "O'rta",
-      points: 25,
-      completed: false,
-      category: "Backend"
-    },
-    {
-      id: 4,
-      title: "TypeScript Generics",
-      description: "Generic tiplar bilan ishlash",
-      difficulty: "Qiyin",
-      points: 35,
-      completed: false,
-      category: "TypeScript"
-    },
-    {
-      id: 5,
-      title: "CSS Flexbox Layout",
-      description: "Flexbox bilan responsive layout",
-      difficulty: "Oson",
-      points: 15,
-      completed: true,
-      category: "CSS"
-    },
-    {
-      id: 6,
-      title: "Node.js REST API",
-      description: "Express.js bilan API yaratish",
-      difficulty: "Qiyin",
-      points: 40,
-      completed: false,
-      category: "Backend"
-    }
-  ])
+  const [exercises, setExercises] = useState([])
 
   const toggleExercise = useCallback((exerciseId) => {
     setExercises(prev => prev.map(e => 
@@ -260,15 +134,15 @@ export const AppDataProvider = ({ children }) => {
 
   const addExercise = useCallback((exercise) => {
     setExercises(prev => [exercise, ...prev])
-  }, [])
+    // Firestore ga saqlash
+    if (user) {
+      const exerciseRef = doc(db, 'users', user.uid, 'exercises', String(exercise.id))
+      setDoc(exerciseRef, exercise).catch(e => console.error('Error saving exercise:', e))
+    }
+  }, [user])
 
   // =================== REJA ===================
-  const [dailyTasks, setDailyTasks] = useState([
-    { id: 1, title: "JavaScript dars", time: "09:00 - 10:30", type: "lesson", completed: true },
-    { id: 2, title: "Array mashqlari", time: "11:00 - 12:00", type: "exercise", completed: true },
-    { id: 3, title: "React Hook'lar video", time: "14:00 - 15:00", type: "video", completed: false },
-    { id: 4, title: "API loyiha", time: "16:00 - 18:00", type: "project", completed: false }
-  ])
+  const [dailyTasks, setDailyTasks] = useState([])
 
   const toggleDailyTask = useCallback((taskId) => {
     setDailyTasks(prev => prev.map(t => 
@@ -277,41 +151,164 @@ export const AppDataProvider = ({ children }) => {
   }, [])
 
   const addDailyTask = useCallback((task) => {
-    setDailyTasks(prev => [...prev, { ...task, id: Date.now() }])
+    setDailyTasks(prev => [...prev, { ...task, id: task.id || Date.now() }])
   }, [])
 
+  // =================== DARSLAR, MASHQLAR, REJA ni Firestore dan yuklash ===================
+  useEffect(() => {
+    if (!user) {
+      setLessons([])
+      setExercises([])
+      setDailyTasks([])
+      return
+    }
+
+    const loadUserData = async () => {
+      try {
+        // Progress ma'lumotlarini parallel yuklash
+        const [lessonProgSnap, exerciseCompSnap] = await Promise.all([
+          getDocs(collection(db, 'users', user.uid, 'lessonProgress')),
+          getDocs(collection(db, 'users', user.uid, 'exerciseCompletion'))
+        ])
+
+        const lessonProgress = {}
+        lessonProgSnap.forEach(d => {
+          lessonProgress[d.id] = d.data().progress || 0
+        })
+
+        const completedExerciseIds = new Set()
+        exerciseCompSnap.forEach(d => {
+          completedExerciseIds.add(d.id)
+        })
+
+        // Darslar
+        const lessonsRef = collection(db, 'users', user.uid, 'lessons')
+        const lessonsSnap = await getDocs(lessonsRef)
+        if (!lessonsSnap.empty) {
+          const loadedLessons = lessonsSnap.docs.map(d => {
+            const data = { id: d.id, ...d.data() }
+            data.progress = lessonProgress[d.id] ?? data.progress ?? 0
+            return data
+          })
+          setLessons(loadedLessons)
+        } else {
+          // Standart darslar (birinchi marta login)
+          const defaults = [
+            { id: 1, title: "JavaScript asoslari", description: "O'zgaruvchilar, funksiyalar va massivlar bilan ishlash", duration: "45 daqiqa", students: 24, progress: 0, thumbnail: "🟨", category: "JavaScript" },
+            { id: 2, title: "React Hooks", description: "useState, useEffect va boshqa hooklar", duration: "60 daqiqa", students: 18, progress: 0, thumbnail: "⚛️", category: "React" },
+            { id: 3, title: "Node.js kirish", description: "Server tomonlama JavaScript", duration: "55 daqiqa", students: 32, progress: 0, thumbnail: "🟢", category: "Backend" },
+            { id: 4, title: "TypeScript asoslari", description: "Tiplar va interfacelar", duration: "40 daqiqa", students: 15, progress: 0, thumbnail: "🔷", category: "TypeScript" },
+            { id: 5, title: "Git va GitHub", description: "Version control tizimi", duration: "35 daqiqa", students: 28, progress: 0, thumbnail: "🐙", category: "Tools" }
+          ]
+          setLessons(defaults.map(l => ({
+            ...l,
+            progress: lessonProgress[l.id] ?? 0
+          })))
+        }
+
+        // Mashqlar
+        const exercisesRef = collection(db, 'users', user.uid, 'exercises')
+        const exercisesSnap = await getDocs(exercisesRef)
+        if (!exercisesSnap.empty) {
+          const loadedExercises = exercisesSnap.docs.map(d => {
+            const data = { id: d.id, ...d.data() }
+            data.completed = completedExerciseIds.has(String(d.id)) || data.completed
+            return data
+          })
+          setExercises(loadedExercises)
+        } else {
+          const defaults = [
+            { id: 1, title: "JavaScript Array Methods", description: "map, filter, reduce metodlarini qo'llash", difficulty: "Oson", points: 10, completed: false, category: "JavaScript" },
+            { id: 2, title: "React State Management", description: "useState va useReducer bilan ishlash", difficulty: "O'rta", points: 20, completed: false, category: "React" },
+            { id: 3, title: "API Integration", description: "fetch va axios bilan API so'rovlar", difficulty: "O'rta", points: 25, completed: false, category: "Backend" },
+            { id: 4, title: "TypeScript Generics", description: "Generic tiplar bilan ishlash", difficulty: "Qiyin", points: 35, completed: false, category: "TypeScript" },
+            { id: 5, title: "CSS Flexbox Layout", description: "Flexbox bilan responsive layout", difficulty: "Oson", points: 15, completed: false, category: "CSS" },
+            { id: 6, title: "Node.js REST API", description: "Express.js bilan API yaratish", difficulty: "Qiyin", points: 40, completed: false, category: "Backend" }
+          ]
+          setExercises(defaults.map(e => ({
+            ...e,
+            completed: completedExerciseIds.has(String(e.id))
+          })))
+        }
+
+        // Kunlik rejalar
+        const tasksRef = collection(db, 'users', user.uid, 'dailyTasks')
+        const tasksSnap = await getDocs(tasksRef)
+        if (!tasksSnap.empty) {
+          const loadedTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          setDailyTasks(loadedTasks)
+        }
+      } catch (error) {
+        console.error('Error loading user data from Firestore:', error)
+      }
+    }
+
+    loadUserData()
+  }, [user])
+
   // =================== FAOLIYAT ===================
-  const [activities, setActivities] = useState([
-    { id: 1, title: "JavaScript asoslari kursi tugallandi", time: "2 soat oldin", type: "success" },
-    { id: 2, title: "Yangi mashq qo'shildi: React Hooks", time: "5 soat oldin", type: "info" },
-    { id: 3, title: "AI Ustoz bilan suhbat", time: "1 kun oldin", type: "chat" }
-  ])
+  const [activities, setActivities] = useState([])
 
   const addActivity = useCallback((activity) => {
     setActivities(prev => [{ ...activity, id: Date.now(), time: 'Hozir' }, ...prev].slice(0, 10))
-  }, [])
+    // Firestore ga ham saqlash
+    if (saveActivity && activity.title) {
+      saveActivity(activity.title, activity.type || 'info')
+    }
+  }, [saveActivity])
 
   // =================== BILDIRISHNOMALAR ===================
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Yangi mashq qo'shildi: React Hooks", time: "5 daqiqa oldin", read: false },
-    { id: 2, text: "JavaScript kursi yangilandi", time: "1 soat oldin", read: false },
-    { id: 3, text: "AI Ustoz javob berdi", time: "2 soat oldin", read: true },
-  ])
+  const [notifications, setNotifications] = useState([])
 
-  const addNotification = useCallback((text) => {
-    setNotifications(prev => [
-      { id: Date.now(), text, time: 'Hozir', read: false },
-      ...prev
-    ].slice(0, 20))
-  }, [])
+  const addNotification = useCallback(async (text) => {
+    if (!user) {
+      setNotifications(prev => [
+        { id: Date.now(), text, time: 'Hozir', read: false },
+        ...prev
+      ].slice(0, 20))
+      return
+    }
 
-  const markNotificationRead = useCallback((id) => {
+    try {
+      const notifRef = collection(db, 'users', user.uid, 'notifications')
+      await addDoc(notifRef, {
+        text,
+        read: false,
+        createdAt: serverTimestamp()
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
+  }, [user])
+
+  const markNotificationRead = useCallback(async (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  }, [])
+    if (!user) return
+    try {
+      const notifRef = doc(db, 'users', user.uid, 'notifications', String(id))
+      await updateDoc(notifRef, { read: true })
+    } catch (error) {
+      console.error('Error marking notification read:', error)
+    }
+  }, [user])
 
-  const markAllNotificationsRead = useCallback(() => {
+  const markAllNotificationsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-  }, [])
+    if (!user) return
+    try {
+      const notifQuery = query(
+        collection(db, 'users', user.uid, 'notifications'),
+        where('read', '==', false)
+      )
+      const snapshot = await getDocs(notifQuery)
+      const updates = snapshot.docs.map(docSnap =>
+        updateDoc(docSnap.ref, { read: true })
+      )
+      await Promise.all(updates)
+    } catch (error) {
+      console.error('Error marking all notifications read:', error)
+    }
+  }, [user])
 
   // =================== HISOBLANGAN QIYMATLAR ===================
   const completedLessons = lessons.filter(l => l.progress === 100).length
@@ -330,7 +327,7 @@ export const AppDataProvider = ({ children }) => {
 
   const value = {
     // Guruhlar
-    groups, setGroups, addGroup, removeGroup,
+    groups, setGroups, addGroup, removeGroup, loadGroups,
     pendingRequests, setPendingRequests, addPendingRequest,
     // Darslar
     lessons, setLessons, updateLessonProgress, addLesson,
