@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../config/firebase'
+import { resetChat } from '../config/gemini'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
@@ -58,7 +59,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   // Ro'yxatdan o'tish
-  const register = async (email, password, name, userType) => {
+  const register = async (email, password, name, userType, extraData = {}) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password)
       
@@ -85,7 +86,8 @@ export const AuthProvider = ({ children }) => {
         photoURL: null,
         selectedTech: null,
         technologies: [],
-        onboardingCompleted: false
+        onboardingCompleted: false,
+        ...extraData
       })
 
       return result.user
@@ -98,11 +100,32 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password)
+      if (!result.user.emailVerified) {
+        // Resend uchun foydalanuvchini saqlab qo'yish (signOut dan oldin)
+        setUnverifiedUser(result.user)
+        await signOut(auth)
+        const error = new Error('Email not verified')
+        error.code = 'auth/email-not-verified'
+        throw error
+      }
       await fetchUserProfile(result.user.uid)
       return result.user
     } catch (error) {
       throw error
     }
+  }
+
+  // Tasdiqlanmagan foydalanuvchini saqlash (resend uchun)
+  const [unverifiedUser, setUnverifiedUser] = useState(null)
+
+  const resendVerificationEmail = async () => {
+    const targetUser = auth.currentUser || unverifiedUser
+    if (!targetUser) {
+      const error = new Error('No current user')
+      error.code = 'auth/no-current-user'
+      throw error
+    }
+    await sendEmailVerification(targetUser)
   }
 
   // Google bilan kirish
@@ -140,6 +163,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await signOut(auth)
       setUserProfile(null)
+      resetChat()
     } catch (error) {
       throw error
     }
@@ -282,6 +306,7 @@ export const AuthProvider = ({ children }) => {
     login,
     loginWithGoogle,
     logout,
+    resendVerificationEmail,
     fetchUserProfile,
     updateUserProfile,
     saveLessonProgress,
