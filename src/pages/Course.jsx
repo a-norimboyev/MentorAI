@@ -8,7 +8,11 @@ import {
   Clock, ArrowLeft, ArrowRight, Loader2, Sparkles, 
   GraduationCap, Target, Lightbulb, ExternalLink, RotateCcw, Menu, X
 } from 'lucide-react'
+import { getModel } from '../config/gemini'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import DOMPurify from 'dompurify'
+import { db } from '../config/firebase'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 // Roadmap ma'lumotlari — har bir yo'nalish uchun kurs tuzilmasi
 const courseStructure = {
@@ -399,6 +403,27 @@ const Course = () => {
   const [loading, setLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  
+  // Cache: GenAI instance va dars kontentlari
+  const genAIRef = useRef(null)
+  const contentCacheRef = useRef({})
+
+  // Firestore dan completedLessons ni yuklash
+  useEffect(() => {
+    if (!userProfile?.uid) return
+    const loadCompletedLessons = async () => {
+      try {
+        const docRef = doc(db, 'users', userProfile.uid, 'courseProgress', field)
+        const snap = await getDoc(docRef)
+        if (snap.exists()) {
+          setCompletedLessons(snap.data().completedLessons || [])
+        }
+      } catch (e) {
+        console.error('Error loading course progress:', e)
+      }
+    }
+    loadCompletedLessons()
+  }, [userProfile?.uid, field])
 
   const currentChapter = chapters[activeChapter]
   const currentLesson = currentChapter?.lessons[activeLesson]
@@ -409,6 +434,14 @@ const Course = () => {
 
   // AI bilan dars kontentini generatsiya qilish
   const generateLessonContent = async () => {
+    const cacheKey = `${field}-${currentLesson?.id}`
+    
+    // Cache dan olish
+    if (contentCacheRef.current[cacheKey]) {
+      setLessonContent(contentCacheRef.current[cacheKey])
+      return
+    }
+
     setLoading(true)
     setLessonContent('')
 
@@ -420,8 +453,14 @@ const Course = () => {
     }
 
     try {
-      const genAI = new GoogleGenerativeAI(apiKey)
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+      // Umumiy gemini.js model ni ishlatish, fallback sifatida yangi yaratish
+      let aiModel = getModel()
+      if (!aiModel) {
+        if (!genAIRef.current) {
+          genAIRef.current = new GoogleGenerativeAI(apiKey)
+        }
+        aiModel = genAIRef.current.getGenerativeModel({ model: 'gemini-2.0-flash' })
+      }
 
       const prompt = `Sen dasturlash o'qituvchisisan. "${currentLesson.title}" mavzusida dars yoz.
 
@@ -442,8 +481,9 @@ Qoidalar:
 - Aniq va qisqa yoz
 - Har bir tushunchani hayotiy misol bilan tushuntir`
 
-      const result = await model.generateContent(prompt)
+      const result = await aiModel.generateContent(prompt)
       const text = result.response.text()
+      contentCacheRef.current[cacheKey] = text
       setLessonContent(text)
     } catch (err) {
       console.error('AI content error:', err)
@@ -468,7 +508,14 @@ Qoidalar:
   const handleLessonComplete = () => {
     const lessonId = currentLesson.id
     if (!completedLessons.includes(lessonId)) {
-      setCompletedLessons(prev => [...prev, lessonId])
+      const updated = [...completedLessons, lessonId]
+      setCompletedLessons(updated)
+      // Firestore ga saqlash
+      if (userProfile?.uid) {
+        const docRef = doc(db, 'users', userProfile.uid, 'courseProgress', field)
+        setDoc(docRef, { completedLessons: updated, updatedAt: new Date().toISOString() }, { merge: true })
+          .catch(e => console.error('Error saving course progress:', e))
+      }
     }
     // Keyingi darsga o'tish
     handleNextLesson()
@@ -531,6 +578,13 @@ Qoidalar:
     // Paragraphs
     html = html.replace(/\n\n/g, '</p><p class="text-slate-300 leading-relaxed mb-3">')
     html = '<p class="text-slate-300 leading-relaxed mb-3">' + html + '</p>'
+    
+    // DOMPurify bilan xavfsiz sanitizatsiya
+    html = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'strong', 'em', 'code', 'pre', 'div', 'span', 'li', 'ul', 'ol', 'br', 'hr', 'a', 'img'],
+      ALLOWED_ATTR: ['class', 'style', 'href', 'target', 'rel', 'src', 'alt', 'width', 'height'],
+      ALLOW_DATA_ATTR: false
+    })
     
     return html
   }

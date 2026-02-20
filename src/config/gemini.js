@@ -28,8 +28,15 @@ Qoidalar:
 
 export const isGeminiConfigured = !!apiKey
 
+// Model ni export qilish (Course.jsx uchun)
+export const getModel = () => model
+
 // Chat sessiyasi
 let chatSession = null
+
+export const resetChat = () => {
+  chatSession = null
+}
 
 export const startNewChat = () => {
   if (!model) return null
