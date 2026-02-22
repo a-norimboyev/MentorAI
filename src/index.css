@@ -22,28 +22,68 @@
   --border-color: #334155;
 }
 
-/* Base transitions for smooth theme switching */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+/* Theme transition — faqat theme o'zgarganda, * emas */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
 }
 
 /* Light theme overrides */
 .light .bg-slate-900 { background-color: var(--bg-primary) !important; }
 .light .bg-slate-800 { background-color: var(--bg-secondary) !important; }
+.light .bg-slate-800\/50 { background-color: rgba(255, 255, 255, 0.8) !important; }
 .light .bg-slate-700 { background-color: var(--bg-tertiary) !important; }
+.light .bg-slate-700\/50 { background-color: rgba(241, 245, 249, 0.7) !important; }
 .light .text-white { color: var(--text-primary) !important; }
 .light .text-slate-300 { color: var(--text-secondary) !important; }
 .light .text-slate-400 { color: var(--text-muted) !important; }
 .light .text-slate-500 { color: #64748b !important; }
+.light .text-slate-200 { color: #334155 !important; }
 .light .border-slate-700 { border-color: var(--border-color) !important; }
 .light .border-slate-600 { border-color: #cbd5e1 !important; }
 .light .border-slate-800 { border-color: var(--border-color) !important; }
+
+/* Light theme inputs */
+.light .bg-slate-700.border.border-slate-600 input,
+.light input.bg-slate-700 { background-color: #f1f5f9 !important; color: #0f172a !important; }
+.light select.bg-slate-700 { background-color: #f1f5f9 !important; color: #0f172a !important; }
+.light textarea.bg-slate-700 { background-color: #f1f5f9 !important; color: #0f172a !important; }
+
+/* Light theme gradients */
+.light .from-slate-900 { --tw-gradient-from: #f8fafc !important; }
+.light .to-slate-800 { --tw-gradient-to: #ffffff !important; }
+.light .from-slate-800 { --tw-gradient-from: #ffffff !important; }
+
+/* Light theme colored text adjustments */
+.light .text-blue-400 { color: #2563eb !important; }
+.light .text-green-400 { color: #16a34a !important; }
+.light .text-purple-400 { color: #9333ea !important; }
+.light .text-yellow-400 { color: #ca8a04 !important; }
+.light .text-red-400 { color: #dc2626 !important; }
+.light .text-orange-400 { color: #ea580c !important; }
+.light .text-cyan-400 { color: #0891b2 !important; }
+
+/* Light theme colored backgrounds */
+.light .bg-blue-500\/10 { background-color: rgba(37, 99, 235, 0.08) !important; }
+.light .bg-green-500\/10 { background-color: rgba(22, 163, 74, 0.08) !important; }
+.light .bg-purple-500\/10 { background-color: rgba(147, 51, 234, 0.08) !important; }
+.light .bg-yellow-500\/10 { background-color: rgba(202, 138, 4, 0.08) !important; }
+.light .bg-red-500\/10 { background-color: rgba(220, 38, 38, 0.08) !important; }
 
 /* Light theme sidebar */
 .light .sidebar-light {
   background-color: var(--bg-secondary);
   border-color: var(--border-color);
 }
+
+/* Light theme hover states */
+.light .hover\:bg-slate-700:hover { background-color: #e2e8f0 !important; }
+.light .hover\:bg-slate-800:hover { background-color: #f1f5f9 !important; }
+
+/* Light theme placeholder */
+.light ::placeholder { color: #94a3b8 !important; }
 
 /* Custom scrollbar - Dark */
 :root.dark ::-webkit-scrollbar-track {

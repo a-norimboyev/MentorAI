@@ -83,7 +83,7 @@ export const getEventsForDate = async (userId, date) => {
 }
 
 // Get upcoming events
-export const getUpcomingEvents = async (userId, limit = 5) => {
+export const getUpcomingEvents = async (userId, maxResults = 5) => {
   try {
     const eventsRef = collection(db, 'users', userId, 'scheduleEvents')
     const querySnapshot = await getDocs(eventsRef)
@@ -96,7 +96,7 @@ export const getUpcomingEvents = async (userId, limit = 5) => {
       }))
       .filter(event => event.date >= currentDate)
       .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time))
-      .slice(0, limit)
+      .slice(0, maxResults)
     
     return events
   } catch (error) {
