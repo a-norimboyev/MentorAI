@@ -463,9 +463,9 @@ const Settings = () => {
                         <p className="text-slate-300">2FA hozir o'chirilgan</p>
                         <p className="text-sm text-slate-400">Hisobingizni yanada xavfsiz qiling</p>
                       </div>
-                      <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
-                        Yoqish
-                      </button>
+                      <span className="bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-not-allowed">
+                        Tez kunda
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -518,9 +518,10 @@ const Settings = () => {
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="uz">O'zbekcha</option>
-                      <option value="ru">Русский</option>
-                      <option value="en">English</option>
+                      <option value="ru" disabled>Русский (tez kunda)</option>
+                      <option value="en" disabled>English (tez kunda)</option>
                     </select>
+                    <p className="text-xs text-slate-500 mt-2">Hozircha faqat o'zbek tili mavjud</p>
                   </div>
 
                   <div>
