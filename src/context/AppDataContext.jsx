@@ -66,6 +66,7 @@ export const AppDataProvider = ({ children }) => {
 
   // =================== GURUHLAR ===================
   const [groups, setGroups] = useState([])
+  const [dataLoading, setDataLoading] = useState(true)
 
   const [pendingRequests, setPendingRequests] = useState([])
 
@@ -82,6 +83,8 @@ export const AppDataProvider = ({ children }) => {
       setGroups(formattedGroups)
     } catch (error) {
       console.error('Error loading groups from Firestore:', error)
+    } finally {
+      setDataLoading(false)
     }
   }, [user])
 
@@ -92,6 +95,7 @@ export const AppDataProvider = ({ children }) => {
     } else {
       setGroups([])
       setPendingRequests([])
+      setDataLoading(false)
     }
   }, [user, loadGroups])
 
@@ -326,6 +330,8 @@ export const AppDataProvider = ({ children }) => {
   const weeklyLessonProgress = Math.min(100, Math.round((completedLessons / weeklyLessonGoal) * 100))
 
   const value = {
+    // Loading
+    dataLoading,
     // Guruhlar
     groups, setGroups, addGroup, removeGroup, loadGroups,
     pendingRequests, setPendingRequests, addPendingRequest,

@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react'
 import { db } from '../config/firebase'
 import { 
   collection, addDoc, query, where, orderBy, onSnapshot, 
-  doc, getDoc, getDocs, serverTimestamp, updateDoc, or, limit 
+  doc, getDoc, getDocs, serverTimestamp, updateDoc 
 } from 'firebase/firestore'
 
 const Messages = () => {
