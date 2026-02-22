@@ -2,33 +2,43 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from 'react-hot-toast'
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import ForgotPassword from './pages/ForgotPassword'
-import SelectRole from './pages/SelectRole'
-import RegisterStudent from './pages/RegisterStudent'
-import RegisterTeacher from './pages/RegisterTeacher'
-import RegisterSelfLearner from './pages/RegisterSelfLearner'
-import SelectField from './pages/SelectField'
-import Onboarding from './pages/Onboarding'
-import Roadmap from './pages/Roadmap'
-import Course from './pages/Course'
-import Dashboard from './pages/Dashboard'
-import Groups from './pages/Groups'
-import Requests from './pages/Requests'
-import GroupDetail from './pages/GroupDetail'
-import Lessons from './pages/Lessons'
-import Exercises from './pages/Exercises'
-import Messages from './pages/Messages'
-import AIChat from './pages/AIChat'
-import Schedule from './pages/Schedule'
-import Settings from './pages/Settings'
-import Quizzes from './pages/Quizzes'
-import Analytics from './pages/Analytics'
-import SearchPage from './pages/Search'
+import { lazy, Suspense } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
 import { AppDataProvider } from './context/AppDataContext'
 import { SidebarProvider } from './context/SidebarContext'
+
+// Lazy loaded pages — code splitting
+const Landing = lazy(() => import('./pages/Landing'))
+const Login = lazy(() => import('./pages/Login'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const SelectRole = lazy(() => import('./pages/SelectRole'))
+const RegisterStudent = lazy(() => import('./pages/RegisterStudent'))
+const RegisterTeacher = lazy(() => import('./pages/RegisterTeacher'))
+const RegisterSelfLearner = lazy(() => import('./pages/RegisterSelfLearner'))
+const SelectField = lazy(() => import('./pages/SelectField'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
+const Roadmap = lazy(() => import('./pages/Roadmap'))
+const Course = lazy(() => import('./pages/Course'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Groups = lazy(() => import('./pages/Groups'))
+const Requests = lazy(() => import('./pages/Requests'))
+const GroupDetail = lazy(() => import('./pages/GroupDetail'))
+const Lessons = lazy(() => import('./pages/Lessons'))
+const Exercises = lazy(() => import('./pages/Exercises'))
+const Messages = lazy(() => import('./pages/Messages'))
+const AIChat = lazy(() => import('./pages/AIChat'))
+const Schedule = lazy(() => import('./pages/Schedule'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Quizzes = lazy(() => import('./pages/Quizzes'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const SearchPage = lazy(() => import('./pages/Search'))
+
+// Loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+)
 
 // Protected Route komponenti
 const ProtectedRoute = ({ children }) => {
@@ -69,7 +79,9 @@ const AuthRoute = ({ children }) => {
 
 function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<PageLoader />}>
+      <ErrorBoundary>
+      <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
       <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
@@ -96,6 +108,8 @@ function AppRoutes() {
       <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
+      </ErrorBoundary>
+    </Suspense>
   )
 }
 

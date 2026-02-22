@@ -1,4 +1,4 @@
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, RefreshCw, Home } from 'lucide-react'
 import { Component } from 'react'
 
 export class ErrorBoundary extends Component {
@@ -21,7 +21,16 @@ export class ErrorBoundary extends Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null })
-    window.location.reload()
+    if (this.props.onReset) {
+      this.props.onReset()
+    } else {
+      window.location.reload()
+    }
+  }
+
+  handleGoHome = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null })
+    window.location.href = '/dashboard'
   }
 
   render() {
@@ -42,13 +51,22 @@ export class ErrorBoundary extends Component {
                 <pre className="whitespace-pre-wrap">{this.state.errorInfo?.componentStack}</pre>
               </details>
             )}
-            <button
-              onClick={this.handleReset}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Qayta yuklash
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={this.handleGoHome}
+                className="flex-1 flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg transition"
+              >
+                <Home className="w-4 h-4" />
+                Bosh sahifa
+              </button>
+              <button
+                onClick={this.handleReset}
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Qayta yuklash
+              </button>
+            </div>
           </div>
         </div>
       )
