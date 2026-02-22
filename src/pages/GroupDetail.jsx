@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { getGroupDetails, removeStudentFromGroup } from '../utils/groupService'
 import { db } from '../config/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, query, where, getDocs, collection, documentId } from 'firebase/firestore'
 import { 
   ArrowLeft,
   Users, 
@@ -51,24 +51,32 @@ const GroupDetail = () => {
           setGroup(groupData)
         }
 
-        // A'zolarni yuklash
+        // A'zolarni batchda yuklash (N+1 query o'rniga)
         const members = groupData?.members || []
         const studentList = []
-        for (const memberId of members) {
+        
+        // Firestore 'in' query max 30 ta qabul qiladi
+        const chunks = []
+        for (let i = 0; i < members.length; i += 30) {
+          chunks.push(members.slice(i, i + 30))
+        }
+        
+        for (const chunk of chunks) {
           try {
-            const userDoc = await getDoc(doc(db, 'users', memberId))
-            if (userDoc.exists()) {
+            const q = query(collection(db, 'users'), where(documentId(), 'in', chunk))
+            const snapshot = await getDocs(q)
+            snapshot.docs.forEach(userDoc => {
               const userData = userDoc.data()
               studentList.push({
-                id: memberId,
+                id: userDoc.id,
                 name: userData.name || 'Noma\'lum',
                 email: userData.email || '',
                 progress: 0,
                 joinedAt: userData.createdAt || new Date().toISOString()
               })
-            }
+            })
           } catch (e) {
-            console.error('Error loading member:', e)
+            console.error('Error loading members batch:', e)
           }
         }
         setStudents(studentList)

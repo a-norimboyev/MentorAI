@@ -17,7 +17,7 @@ import Sidebar from '../components/Sidebar'
 import { useSidebar } from '../context/SidebarContext'
 import { getPendingRequests, approveStudentRequest, rejectStudentRequest } from '../utils/groupService'
 import { db } from '../config/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, query, where, getDocs, collection, documentId } from 'firebase/firestore'
 
 const Requests = () => {
   const navigate = useNavigate()
@@ -39,32 +39,46 @@ const Requests = () => {
       setLoadingRequests(true)
       try {
         const allRequests = []
+        const allPendingReqs = []
+        
         for (const group of groups) {
           const pending = await getPendingRequests(group.id)
           for (const req of pending) {
-            // Get student info
-            let studentName = 'Noma\'lum'
-            let studentEmail = ''
-            try {
-              const studentDoc = await getDoc(doc(db, 'users', req.studentId))
-              if (studentDoc.exists()) {
-                studentName = studentDoc.data().name || 'Noma\'lum'
-                studentEmail = studentDoc.data().email || ''
-              }
-            } catch (e) {
-              console.error('Error loading student:', e)
-            }
-            allRequests.push({
-              id: req.id,
-              studentId: req.studentId,
-              studentName,
-              studentEmail,
-              groupId: group.id,
-              groupName: group.name,
-              status: req.status || 'pending',
-              createdAt: req.createdAt?.toDate?.() ? req.createdAt.toDate().toISOString() : new Date().toISOString()
-            })
+            allPendingReqs.push({ ...req, groupId: group.id, groupName: group.name })
           }
+        }
+
+        // Barcha student ID larni to'plash va batchda yuklash
+        const studentIds = [...new Set(allPendingReqs.map(r => r.studentId).filter(Boolean))]
+        const studentMap = {}
+        
+        // Firestore 'in' max 30 ta
+        for (let i = 0; i < studentIds.length; i += 30) {
+          const chunk = studentIds.slice(i, i + 30)
+          try {
+            const q = query(collection(db, 'users'), where(documentId(), 'in', chunk))
+            const snapshot = await getDocs(q)
+            snapshot.docs.forEach(d => {
+              const data = d.data()
+              studentMap[d.id] = { name: data.name || 'Noma\'lum', email: data.email || '' }
+            })
+          } catch (e) {
+            console.error('Error loading students batch:', e)
+          }
+        }
+
+        for (const req of allPendingReqs) {
+          const student = studentMap[req.studentId] || { name: 'Noma\'lum', email: '' }
+          allRequests.push({
+            id: req.id,
+            studentId: req.studentId,
+            studentName: student.name,
+            studentEmail: student.email,
+            groupId: req.groupId,
+            groupName: req.groupName,
+            status: req.status || 'pending',
+            createdAt: req.createdAt?.toDate?.() ? req.createdAt.toDate().toISOString() : new Date().toISOString()
+          })
         }
         setRequests(allRequests)
       } catch (error) {
