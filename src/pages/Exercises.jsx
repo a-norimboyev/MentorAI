@@ -8,7 +8,7 @@ import { storage } from '../config/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const Exercises = () => {
-  const { userProfile, saveExerciseCompletion } = useAuth()
+  const { user, userProfile, saveExerciseCompletion } = useAuth()
   const { collapsed } = useSidebar()
   const { exercises, toggleExercise, addExercise, totalPoints, completedExercises, addActivity, addNotification } = useAppData()
   const isTeacher = userProfile?.userType === 'teacher'

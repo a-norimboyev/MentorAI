@@ -30,11 +30,12 @@ if (isFirebaseConfigured) {
   db = getFirestore(app)
   storage = getStorage(app)
 } else {
-  // Placeholder objects to prevent crashes
-  app = initializeApp(firebaseConfig)
-  auth = getAuth(app)
-  db = getFirestore(app)
-  storage = getStorage(app)
+  console.warn('Firebase is not configured. Set VITE_FIREBASE_* env variables.')
+  // null exports — components should check isFirebaseConfigured before use
+  app = null
+  auth = null
+  db = null
+  storage = null
 }
 
 export { auth, db, storage }
