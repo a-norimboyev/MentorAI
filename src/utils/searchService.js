@@ -1,11 +1,12 @@
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
 // Search lessons
 export const searchLessons = async (searchTerm) => {
   try {
     const lessonsRef = collection(db, 'lessons')
-    const querySnapshot = await getDocs(lessonsRef)
+    const q = query(lessonsRef, limit(50))
+    const querySnapshot = await getDocs(q)
     
     const results = querySnapshot.docs
       .map(doc => ({
@@ -29,7 +30,8 @@ export const searchLessons = async (searchTerm) => {
 export const searchExercises = async (searchTerm) => {
   try {
     const exercisesRef = collection(db, 'exercises')
-    const querySnapshot = await getDocs(exercisesRef)
+    const q = query(exercisesRef, limit(50))
+    const querySnapshot = await getDocs(q)
     
     const results = querySnapshot.docs
       .map(doc => ({
@@ -53,7 +55,7 @@ export const searchExercises = async (searchTerm) => {
 export const searchGroups = async (userId, searchTerm) => {
   try {
     const groupsRef = collection(db, 'groups')
-    const q = query(groupsRef, where('members', 'array-contains', userId))
+    const q = query(groupsRef, where('members', 'array-contains', userId), limit(50))
     const querySnapshot = await getDocs(q)
     
     const results = querySnapshot.docs
@@ -78,12 +80,12 @@ export const searchGroups = async (userId, searchTerm) => {
 export const searchUsers = async (searchTerm) => {
   try {
     const usersRef = collection(db, 'users')
-    const querySnapshot = await getDocs(usersRef)
+    const q = query(usersRef, limit(50))
+    const querySnapshot = await getDocs(q)
     
     const results = querySnapshot.docs
       .map(doc => {
         const data = doc.data()
-        // Faqat xavfsiz maydonlarni qaytarish — email va shaxsiy ma'lumotlarni chiqarmaslik
         return {
           id: doc.id,
           type: 'user',

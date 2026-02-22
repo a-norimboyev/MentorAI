@@ -31,19 +31,32 @@ export const isGeminiConfigured = !!apiKey
 // Model ni export qilish (Course.jsx uchun)
 export const getModel = () => model
 
-// Chat sessiyasi
-let chatSession = null
-
-export const resetChat = () => {
-  chatSession = null
+// =================== SESSION FACTORY ===================
+// Har bir component o'ziga alohida session oladi — race condition bo'lmaydi
+export const createChatSession = () => {
+  if (!model) return null
+  return model.startChat({ history: [] })
 }
 
+// =================== AI CHAT uchun dedicated session ===================
+let aiChatSession = null
+
+export const resetChat = () => {
+  aiChatSession = null
+}
+
+// Backward compatibility — AIChat.jsx uchun
 export const startNewChat = () => {
-  if (!model) return null
-  chatSession = model.startChat({
-    history: [],
-  })
-  return chatSession
+  resetChat()
+  return getAIChatSession()
+}
+
+const getAIChatSession = () => {
+  if (!aiChatSession) {
+    if (!model) return null
+    aiChatSession = model.startChat({ history: [] })
+  }
+  return aiChatSession
 }
 
 export const sendMessage = async (message) => {
@@ -51,11 +64,10 @@ export const sendMessage = async (message) => {
     throw new Error('Gemini API kaliti sozlanmagan')
   }
   
-  if (!chatSession) {
-    startNewChat()
-  }
+  const session = getAIChatSession()
+  if (!session) throw new Error('Chat session yaratib bo\'lmadi')
 
-  const result = await chatSession.sendMessage(message)
+  const result = await session.sendMessage(message)
   const response = result.response
   return response.text()
 }
@@ -65,11 +77,10 @@ export const sendMessageStream = async (message, onChunk) => {
     throw new Error('Gemini API kaliti sozlanmagan')
   }
   
-  if (!chatSession) {
-    startNewChat()
-  }
+  const session = getAIChatSession()
+  if (!session) throw new Error('Chat session yaratib bo\'lmadi')
 
-  const result = await chatSession.sendMessageStream(message)
+  const result = await session.sendMessageStream(message)
   let fullText = ''
   
   for await (const chunk of result.stream) {
