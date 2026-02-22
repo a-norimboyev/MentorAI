@@ -299,7 +299,7 @@ const Quizzes = () => {
     if (activeQuizRef.current && !quizFinished && timeLeft === 0) {
       finishQuiz()
     }
-  }, [timeLeft, quizFinished])
+  }, [timeLeft, quizFinished, finishQuiz])
 
   const startQuiz = (quiz) => {
     setActiveQuiz(quiz)
@@ -332,7 +332,7 @@ const Quizzes = () => {
     }
   }
 
-  const finishQuiz = () => {
+  const finishQuiz = useCallback(() => {
     setQuizFinished(true)
     const currentAnswers = answersRef.current
     const quiz = activeQuizRef.current
@@ -364,7 +364,7 @@ const Quizzes = () => {
     if (score >= 80) {
       addNotification(`🏆 "${quiz.title}" testida a'lo natija - ${score}%!`)
     }
-  }
+  }, [user, addActivity, addNotification])
 
   const resetQuiz = () => {
     setActiveQuiz(null)

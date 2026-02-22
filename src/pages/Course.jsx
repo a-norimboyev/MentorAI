@@ -8,8 +8,7 @@ import {
   Clock, ArrowLeft, ArrowRight, Loader2, Sparkles, 
   GraduationCap, Target, Lightbulb, ExternalLink, RotateCcw, Menu, X
 } from 'lucide-react'
-import { getModel } from '../config/gemini'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getModel, isGeminiConfigured } from '../config/gemini'
 import DOMPurify from 'dompurify'
 import { db } from '../config/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -404,8 +403,7 @@ const Course = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   
-  // Cache: GenAI instance va dars kontentlari
-  const genAIRef = useRef(null)
+  // Cache: dars kontentlari
   const contentCacheRef = useRef({})
 
   // Firestore dan completedLessons ni yuklash
@@ -446,20 +444,18 @@ const Course = () => {
     setLessonContent('')
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-    if (!apiKey) {
+    if (!apiKey || !isGeminiConfigured) {
       setLessonContent(`# ${currentLesson.title}\n\nAI dars kontenti uchun Gemini API kalitini .env faylga qo'shing.\n\n**VITE_GEMINI_API_KEY** o'zgaruvchisini sozlang.`)
       setLoading(false)
       return
     }
 
     try {
-      // Umumiy gemini.js model ni ishlatish, fallback sifatida yangi yaratish
-      let aiModel = getModel()
+      const aiModel = getModel()
       if (!aiModel) {
-        if (!genAIRef.current) {
-          genAIRef.current = new GoogleGenerativeAI(apiKey)
-        }
-        aiModel = genAIRef.current.getGenerativeModel({ model: 'gemini-2.0-flash' })
+        setLessonContent(`# ${currentLesson.title}\n\nGemini model yuklanmadi. API kalitni tekshiring.`)
+        setLoading(false)
+        return
       }
 
       const prompt = `Sen dasturlash o'qituvchisisan. "${currentLesson.title}" mavzusida dars yoz.
